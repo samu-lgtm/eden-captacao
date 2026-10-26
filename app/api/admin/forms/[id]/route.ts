@@ -50,7 +50,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
   s.pixel_id = s.pixel_id.replace(/\s/g, "");
 
-  const { error } = await db()
+  const { data: updated, error } = await db()
     .from("forms")
     .update({
       name: String(b.name || "").trim() || current.name,
@@ -62,11 +62,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       settings: s,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", params.id);
+    .eq("id", params.id)
+    .select("id, status");
   if (error) {
+    console.error("[forms PUT] error", error);
     const msg = error.code === "23505" ? "Ya existe otro formulario con esa dirección." : error.message;
     return NextResponse.json({ error: msg }, { status: 422 });
   }
+  if (!updated || !updated.length) {
+    console.error("[forms PUT] 0 filas actualizadas", params.id);
+    return NextResponse.json({ error: "La base de datos no ha aceptado el cambio. Revisa que SUPABASE_SERVICE_ROLE_KEY sea la clave secreta (sb_secret_… o service_role), no la publishable/anon." }, { status: 500 });
+  }
+  console.log("[forms PUT] guardado", params.id, updated[0].status);
   if (current.status !== b.status) await logActivity("form", `${current.name}: ${b.status === "ativo" ? "activado" : "pausado"}.`, params.id);
   return NextResponse.json({ ok: true, slug });
 }

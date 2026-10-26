@@ -5,6 +5,7 @@ import type { Field, FieldType, Form, FormSettings } from "@/lib/types";
 import { FIELD_TYPES } from "@/lib/types";
 import { Question } from "@/components/Question";
 import { TabBar, Tab } from "./TabBar";
+import { setDirty } from "@/lib/dirty";
 
 const newId = () => Math.random().toString(36).slice(2, 8);
 
@@ -18,6 +19,8 @@ export default function FormEditor({ initial, tab: initialTab }: { initial: Form
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [armed, setArmed] = useState(false);
   const dirty = useMemo(() => JSON.stringify(f) !== saved, [f, saved]);
+
+  useEffect(() => { setDirty(dirty); return () => setDirty(false); }, [dirty]);
 
   useEffect(() => {
     const h = (e: BeforeUnloadEvent) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } };
