@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PublicForm } from "@/lib/types";
 import { Question } from "@/components/Question";
 import { Logo } from "@/components/Logo";
+import { Intro } from "@/components/Intro";
 
 type Fbq = ((...a: unknown[]) => void) & { callMethod?: (...a: unknown[]) => void; queue?: unknown[]; loaded?: boolean; version?: string; push?: unknown };
 declare global { interface Window { fbq?: Fbq; _fbq?: Fbq } }
@@ -36,6 +37,7 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
   const [err, setErr] = useState("");
   const [state, setState] = useState<"form" | "sending" | "done">("form");
   const [consent, setConsent] = useState<"yes" | "no" | null>(null);
+  const [onIntro, setOnIntro] = useState(!!form.intro);
   const session = useRef("");
   const started = useRef(Date.now());
   const maxStep = useRef(0);
@@ -102,7 +104,7 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (state !== "form") return;
+      if (state !== "form" || onIntro) return;
       const target = e.target as HTMLElement;
       if (e.key === "Enter" && !e.shiftKey && !(target.tagName === "TEXTAREA")) { e.preventDefault(); next(); return; }
       if ((x.type === "select" || x.type === "consent") && target.tagName !== "INPUT" && /^[a-z]$/i.test(e.key)) {
@@ -119,10 +121,12 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
 
   return (
     <div className="pub">
-      <div className="progress"><i style={{ width: `${(state === "done" ? 1 : i / F.length) * 100}%` }} /></div>
+      {onIntro ? null : <div className="progress"><i style={{ width: `${(state === "done" ? 1 : i / F.length) * 100}%` }} /></div>}
       <div className="pubtop"><Logo />{!live ? <span className="hint">{t.paused}</span> : null}</div>
       <div className="pubwrap">
-        {state === "done" ? (
+        {onIntro && form.intro ? (
+          <Intro intro={form.intro} onStart={() => { started.current = Date.now(); setOnIntro(false); }} />
+        ) : state === "done" ? (
           <div><div className="qn">{t.done}</div><div className="q">{form.thanks}</div></div>
         ) : (
           <form onSubmit={(e) => { e.preventDefault(); next(); }} noValidate>

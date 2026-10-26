@@ -20,6 +20,11 @@ export interface FormSettings {
   notify_to: string;
   auto_reply: boolean;
   privacy_url: string;
+  intro_enabled: boolean;
+  intro_title: string;
+  intro_bullets: string;
+  intro_note: string;
+  intro_button: string;
 }
 
 export interface Form {
@@ -68,6 +73,11 @@ export const DEFAULT_SETTINGS: FormSettings = {
   notify_to: "samu@edenperformance.net",
   auto_reply: false,
   privacy_url: "https://edenperformance.net/politica-de-privacidad/",
+  intro_enabled: false,
+  intro_title: "",
+  intro_bullets: "",
+  intro_note: "",
+  intro_button: "",
 };
 
 /** Lo que el navegador del lead puede ver: nunca el token de la Conversions API. */
@@ -83,6 +93,14 @@ export function publicForm(f: Form) {
     pixel_id: f.settings.pixel_id,
     event_name: f.settings.event_name || "Lead",
     privacy_url: f.settings.privacy_url,
+    intro: f.settings.intro_enabled
+      ? {
+          title: f.settings.intro_title,
+          bullets: f.settings.intro_bullets.split("\n").map((x) => x.trim()).filter(Boolean),
+          note: f.settings.intro_note,
+          button: f.settings.intro_button || (f.lang === "pt" ? "Começar" : "Empezar"),
+        }
+      : null,
   };
 }
 export type PublicForm = ReturnType<typeof publicForm>;

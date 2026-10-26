@@ -6,8 +6,24 @@ import { FIELD_TYPES } from "@/lib/types";
 import { Question } from "@/components/Question";
 import { TabBar, Tab } from "./TabBar";
 import { setDirty } from "@/lib/dirty";
+import { Intro } from "@/components/Intro";
 
 const newId = () => Math.random().toString(36).slice(2, 8);
+const INTRO = "__intro";
+const INTRO_EXAMPLE = {
+  es: {
+    intro_title: "Aceleramos el crecimiento de tu e-commerce de moda con **previsibilidad** y **rentabilidad**",
+    intro_bullets: "Crecimiento para tu marca\nEscala previsible y rentable\nEstrategias personalizadas\nAcompañamiento estratégico",
+    intro_note: "Exclusivo para e-commerces de moda que facturan más de **XX.000 €/mes** y quieren acelerar su crecimiento con una estrategia personalizada para el momento de su marca.",
+    intro_button: "Quiero hablar con especialistas",
+  },
+  pt: {
+    intro_title: "Aceleramos o crescimento do seu e-commerce de moda com **previsibilidade** e **lucratividade**",
+    intro_bullets: "Crescimento para sua marca\nEscala previsível e lucrativa\nEstratégias personalizadas\nAcompanhamento estratégico",
+    intro_note: "Exclusivo para e-commerces de moda que faturam acima de **R$ 50.000/mês** e desejam acelerar seu crescimento com uma estratégia personalizada para o momento da sua marca.",
+    intro_button: "Preciso de especialistas",
+  },
+};
 
 export default function FormEditor({ initial, tab: initialTab }: { initial: Form; tab: Tab }) {
   const router = useRouter();
@@ -76,6 +92,31 @@ export default function FormEditor({ initial, tab: initialTab }: { initial: Form
         <div className="ed">
           <div>
             <div className="fields">
+              <div className={`card fld introcard ${sel === INTRO ? "sel" : ""}`} onClick={(e) => { if (!(e.target as HTMLElement).closest("button,input,textarea,select,label")) setSel(INTRO); }}>
+                <span className="n">◆</span>
+                <div style={{ minWidth: 0 }}>
+                  <div className="t">Pantalla de inicio</div>
+                  <div className="k">{s.intro_enabled ? "Se muestra antes de la primera pregunta" : "Desactivada: el formulario empieza directamente"}</div>
+                </div>
+                <span className={`pill ${s.intro_enabled ? "ok" : "off"}`}>{s.intro_enabled ? "Activa" : "Inactiva"}</span>
+                {sel === INTRO ? (
+                  <div className="fedit">
+                    <label className="chk"><input type="checkbox" checked={s.intro_enabled} onChange={(e) => {
+                      const on = e.target.checked;
+                      if (on && !s.intro_title) setS({ intro_enabled: true, ...INTRO_EXAMPLE[f.lang] });
+                      else setS({ intro_enabled: on });
+                    }} />Mostrar pantalla de inicio</label>
+                    {s.intro_enabled ? (
+                      <>
+                        <label className="lbl">Titular (pon **entre dos asteriscos** lo que va en negrita)<textarea className="inp" rows={2} value={s.intro_title} onChange={(e) => setS({ intro_title: e.target.value })} /></label>
+                        <label className="lbl">Puntos (uno por línea)<textarea className="inp" rows={4} value={s.intro_bullets} onChange={(e) => setS({ intro_bullets: e.target.value })} /></label>
+                        <label className="lbl">Nota destacada (opcional)<textarea className="inp" rows={3} value={s.intro_note} onChange={(e) => setS({ intro_note: e.target.value })} /></label>
+                        <label className="lbl">Texto del botón<input className="inp" value={s.intro_button} onChange={(e) => setS({ intro_button: e.target.value })} placeholder={f.lang === "pt" ? "Começar" : "Empezar"} /></label>
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
               {f.fields.map((x, i) => (
                 <div key={x.id} className={`card fld ${x.id === sel ? "sel" : ""}`} onClick={(e) => { if (!(e.target as HTMLElement).closest("button,input,textarea,select,label")) setSel(x.id); }}>
                   <span className="n">{i + 1}</span>
@@ -117,8 +158,10 @@ export default function FormEditor({ initial, tab: initialTab }: { initial: Form
             </div>
           </div>
           <div className="preview">
-            <div className="muted" style={{ fontSize: 11, letterSpacing: ".2em", textTransform: "uppercase", marginBottom: 8 }}>Vista previa · pregunta {ci + 1} de {f.fields.length}</div>
-            <div className="phone">{cur ? <Question field={{ ...cur, options: (cur.options || []).filter((o) => o.trim()) }} index={ci} value={undefined} preview lang={f.lang} privacyUrl={s.privacy_url} /> : <span className="hint">Selecciona una pregunta.</span>}</div>
+            <div className="muted" style={{ fontSize: 11, letterSpacing: ".2em", textTransform: "uppercase", marginBottom: 8 }}>{sel === INTRO ? "Vista previa · pantalla de inicio" : `Vista previa · pregunta ${ci + 1} de ${f.fields.length}`}</div>
+            <div className="phone">{sel === INTRO ? (s.intro_enabled
+              ? <Intro preview intro={{ title: s.intro_title, bullets: s.intro_bullets.split("\n").map((b) => b.trim()).filter(Boolean), note: s.intro_note, button: s.intro_button || (f.lang === "pt" ? "Começar" : "Empezar") }} />
+              : <span className="hint">La pantalla de inicio está desactivada.</span>) : cur ?<Question field={{ ...cur, options: (cur.options || []).filter((o) => o.trim()) }} index={ci} value={undefined} preview lang={f.lang} privacyUrl={s.privacy_url} /> : <span className="hint">Selecciona una pregunta.</span>}</div>
           </div>
         </div>
       ) : (
