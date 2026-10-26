@@ -1,6 +1,9 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 
+export const fetchCache = "force-no-store";
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Eden",
   robots: { index: false, follow: false },
