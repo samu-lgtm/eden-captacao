@@ -44,7 +44,7 @@ export default async function FormsPage() {
                     </div>
                     <div className="row muted" style={{ fontSize: 12, marginTop: 6, gap: 12 }}>
                       <span className="slug">/{f.slug}</span>
-                      <span>{f.lang === "es" ? "Español" : "Portugués"}</span>
+                      <span>{f.lang === "es" ? "España" : "Brasil"}</span>
                     </div>
                   </div>
                   <div className="fstats">

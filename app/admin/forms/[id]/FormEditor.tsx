@@ -174,7 +174,7 @@ export default function FormEditor({ initial, tab: initialTab }: { initial: Form
         </div>
       ) : (
         <div className="sets">
-          <div className="card sec"><div><h3>General</h3><p>Nombre, dirección pública e idioma de los botones.</p></div><div className="fs">
+          <div className="card sec"><div><h3>General</h3><p>Nombre, dirección pública y país. El país define el idioma de los botones y mensajes, el formato del teléfono y el país que se envía a Meta.</p></div><div className="fs">
             <label className="lbl">Nombre<input className="inp" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
             <div className="two">
               <label className="lbl">Dirección (formulario.edenperformance.net/…)<input className="inp" value={f.slug} onChange={(e) => setF({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })} /></label>
@@ -182,7 +182,7 @@ export default function FormEditor({ initial, tab: initialTab }: { initial: Form
             </div>
             <div className="two">
               <label className="lbl">Estado<select className="inp" value={f.status} onChange={(e) => setF({ ...f, status: e.target.value as Form["status"] })}><option value="ativo">Activo (recibe leads)</option><option value="pausado">En pausa</option></select></label>
-              <label className="lbl">Idioma<select className="inp" value={f.lang} onChange={(e) => setF({ ...f, lang: e.target.value as Form["lang"] })}><option value="es">Español</option><option value="pt">Portugués</option></select></label>
+              <label className="lbl">País del formulario<select className="inp" value={f.lang} onChange={(e) => setF({ ...f, lang: e.target.value as Form["lang"] })}><option value="es">España · español, +34</option><option value="pt">Brasil · portugués, +55</option></select></label>
             </div>
           </div></div>
 
