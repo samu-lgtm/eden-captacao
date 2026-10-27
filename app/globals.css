@@ -185,3 +185,7 @@ details.lead summary::-webkit-details-marker{display:none}
 .intro-note strong,.intro-list strong{font-weight:500;color:var(--pub-ink)}
 .intro .pubnav{margin-top:6px}
 .fld.introcard .n{font-size:16px}
+
+.ccheck{display:flex;gap:12px;align-items:flex-start;margin-top:26px;font-size:13.5px;line-height:1.55;color:var(--pub-soft);cursor:pointer;max-width:56ch}
+.ccheck input{accent-color:var(--leaf-soft);width:18px;height:18px;flex:none;margin:2px 0 0}
+.ccheck a{color:var(--pub-ink)}

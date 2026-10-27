@@ -161,7 +161,15 @@ export default function FormEditor({ initial, tab: initialTab }: { initial: Form
             <div className="muted" style={{ fontSize: 11, letterSpacing: ".2em", textTransform: "uppercase", marginBottom: 8 }}>{sel === INTRO ? "Vista previa · pantalla de inicio" : `Vista previa · pregunta ${ci + 1} de ${f.fields.length}`}</div>
             <div className="phone">{sel === INTRO ? (s.intro_enabled
               ? <Intro preview intro={{ title: s.intro_title, bullets: s.intro_bullets.split("\n").map((b) => b.trim()).filter(Boolean), note: s.intro_note, button: s.intro_button || (f.lang === "pt" ? "Começar" : "Empezar") }} />
-              : <span className="hint">La pantalla de inicio está desactivada.</span>) : cur ?<Question field={{ ...cur, options: (cur.options || []).filter((o) => o.trim()) }} index={ci} value={undefined} preview lang={f.lang} privacyUrl={s.privacy_url} /> : <span className="hint">Selecciona una pregunta.</span>}</div>
+              : <span className="hint">La pantalla de inicio está desactivada.</span>) : cur ?(() => {
+              // El consentimiento que sigue a otra pregunta se muestra como casilla en esa pantalla.
+              const merged = cur.type === "consent" && ci > 0 && f.fields[ci - 1].type !== "consent";
+              const q = merged ? f.fields[ci - 1] : cur;
+              const qi = merged ? ci - 1 : ci;
+              const nxt = f.fields[qi + 1];
+              const att = q.type !== "consent" && nxt?.type === "consent" ? nxt : null;
+              return <Question field={{ ...q, options: (q.options || []).filter((o) => o.trim()) }} index={qi} value={undefined} preview lang={f.lang} privacyUrl={s.privacy_url} attached={att ? { field: att, value: undefined } : null} />;
+            })() : <span className="hint">Selecciona una pregunta.</span>}</div>
           </div>
         </div>
       ) : (

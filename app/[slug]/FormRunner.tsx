@@ -62,6 +62,9 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
   useEffect(() => { if (consent === "yes" && form.pixel_id) loadPixel(form.pixel_id); }, [consent, form.pixel_id]);
 
   const x = F[i];
+  // Si la siguiente pregunta es el consentimiento, va como casilla en esta misma pantalla.
+  const att = x && x.type !== "consent" && F[i + 1]?.type === "consent" ? F[i + 1] : null;
+  const stepAfter = att ? i + 2 : i + 1;
 
   const submit = useCallback(async (final: Record<string, string | boolean>) => {
     setState("sending");
@@ -91,15 +94,20 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
     if (x.required && empty) { setErr(x.type === "consent" ? t.consent : t.req); return; }
     if (!empty && x.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v).trim())) { setErr(t.email); return; }
     if (!empty && x.type === "phone" && String(v).replace(/\D/g, "").length < 8) { setErr(t.phone); return; }
+    if (att && att.required && a[att.id] !== true) { setErr(t.consent); return; }
     setErr("");
-    if (i + 1 > maxStep.current) { maxStep.current = i + 1; track("step", i + 1); }
-    if (i < F.length - 1) setI(i + 1); else submit(a);
-  }, [ans, x, i, F.length, submit, t, track]);
+    if (stepAfter > maxStep.current) {
+      for (let k = maxStep.current + 1; k <= stepAfter; k++) track("step", k);
+      maxStep.current = stepAfter;
+    }
+    if (stepAfter < F.length) setI(stepAfter); else submit(a);
+  }, [ans, x, att, stepAfter, F.length, submit, t, track]);
 
   const pick = (v: string | boolean) => {
     const a = { ...ans, [x.id]: v };
     setAns(a); setErr("");
-    if (v !== false) setTimeout(() => next(a), 180);
+    // Con casilla de consentimiento en la pantalla no se avanza solo: el lead la marca y pulsa Enviar.
+    if (v !== false && !att) setTimeout(() => next(a), 180);
   };
 
   useEffect(() => {
@@ -132,11 +140,16 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
           <form onSubmit={(e) => { e.preventDefault(); next(); }} noValidate>
             <input ref={hp} className="hp" tabIndex={-1} autoComplete="off" name="website" aria-hidden="true" />
             <Question key={x.id} field={x} index={i} lang={form.lang} privacyUrl={form.privacy_url} value={ans[x.id]}
-              onChange={(v) => { setAns({ ...ans, [x.id]: v }); if (err) setErr(""); }} onPick={pick} />
+              onChange={(v) => { setAns({ ...ans, [x.id]: v }); if (err) setErr(""); }} onPick={pick}
+              attached={att ? { field: att, value: ans[att.id], onToggle: (c) => { setAns({ ...ans, [att.id]: c }); if (err) setErr(""); } } : null} />
             {err ? <div className="perr" role="alert">{err}</div> : null}
             <div className="pubnav">
-              <button className="pbtn" type="submit" disabled={state === "sending"}>{state === "sending" ? t.sending : i === F.length - 1 ? t.send : t.next}</button>
-              {i > 0 ? <button className="pbtn alt" type="button" onClick={() => { setErr(""); setI(i - 1); }}>{t.back}</button> : null}
+              <button className="pbtn" type="submit" disabled={state === "sending"}>{state === "sending" ? t.sending : stepAfter >= F.length ? t.send : t.next}</button>
+              {i > 0 ? <button className="pbtn alt" type="button" onClick={() => {
+                setErr("");
+                const back = i >= 2 && F[i - 1].type === "consent" && F[i - 2].type !== "consent" ? i - 2 : i - 1;
+                setI(back);
+              }}>{t.back}</button> : null}
               <span className="hint">{t.enter}</span>
             </div>
           </form>
