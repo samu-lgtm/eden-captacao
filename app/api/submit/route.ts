@@ -28,7 +28,7 @@ function validate(fields: Field[], answers: Record<string, unknown>): string | n
 export async function POST(req: NextRequest) {
   let body: {
     formId?: string; answers?: Record<string, unknown>; eventId?: string; hp?: string; elapsed?: number;
-    fbp?: string; fbc?: string; url?: string; source?: Record<string, string>;
+    fbp?: string; fbc?: string; url?: string; source?: Record<string, string>; session?: string;
   };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Petición no válida" }, { status: 400 }); }
 
@@ -57,6 +57,8 @@ export async function POST(req: NextRequest) {
     if (/^(utm_[a-z]+|fbclid|ref)$/.test(k) && typeof v === "string") source[k] = v.slice(0, 200);
   }
 
+  if (typeof body.session === "string" && /^[\w-]{6,64}$/.test(body.session)) source.session = body.session;
+
   const { data: row, error } = await db()
     .from("responses")
     .insert({ form_id: form.id, answers, source, event_id: eventId, ip, user_agent: userAgent, meta_status: "off" })
@@ -65,6 +67,11 @@ export async function POST(req: NextRequest) {
   if (error || !row) {
     await logActivity("err", `No se pudo guardar un lead de ${form.name}: ${error?.message || "error desconocido"}`, form.id);
     return NextResponse.json({ error: "No hemos podido guardar tus datos. Inténtalo de nuevo en unos minutos." }, { status: 500 });
+  }
+
+  // Si había un incompleto de esta misma sesión, ya no hace falta: el lead ha terminado.
+  if (typeof body.session === "string" && /^[\w-]{6,64}$/.test(body.session)) {
+    await db().from("partials").delete().eq("form_id", form.id).eq("session", body.session);
   }
 
   const nameField = form.fields.find((f) => f.type === "text");

@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Field, FieldType, Form, FormSettings } from "@/lib/types";
-import { FIELD_TYPES } from "@/lib/types";
+import { FIELD_TYPES, PARTIAL_NOTICE } from "@/lib/types";
 import { Question } from "@/components/Question";
 import { TabBar, Tab } from "./TabBar";
 import { setDirty } from "@/lib/dirty";
@@ -200,6 +200,18 @@ export default function FormEditor({ initial, tab: initialTab }: { initial: Form
             <label className="lbl">Token de acceso de la Conversions API<input className="inp mono" type="password" autoComplete="off" value={s.capi_token} onChange={(e) => setS({ capi_token: e.target.value })} placeholder="Se genera en el Administrador de eventos" /></label>
             <label className="lbl">Código de prueba (opcional, para Probar eventos)<input className="inp mono" value={s.test_event_code} onChange={(e) => setS({ test_event_code: e.target.value })} placeholder="TEST12345" /></label>
             <div className="note">Se envían cifrados en SHA-256: e-mail, teléfono, nombre y país, además de fbp/fbc, IP y navegador. Quita el código de prueba antes de activar las campañas.</div>
+          </div></div>
+
+          <div className="card sec"><div><h3>Formularios incompletos</h3><p>Guarda los datos de quien empieza y no termina, a partir del paso del teléfono o e-mail, donde se muestra un aviso. No se envían a Meta ni generan avisos por e-mail. Se borran solos a los 30 días.</p></div><div className="fs">
+            <label className="chk"><input type="checkbox" checked={s.partial_enabled} onChange={(e) => setS({ partial_enabled: e.target.checked })} />Guardar formularios incompletos</label>
+            {s.partial_enabled ? (
+              <>
+                <label className="lbl">Aviso que ve el lead (debajo de la pregunta del teléfono o e-mail)
+                  <textarea className="inp" rows={2} value={s.partial_notice} placeholder={PARTIAL_NOTICE[f.lang]} onChange={(e) => setS({ partial_notice: e.target.value })} />
+                </label>
+                <div className="note">Uso limitado: un solo contacto para ayudar a terminar o resolver dudas. Si la persona pide que no la contactéis, elimínala desde Incompletos.</div>
+              </>
+            ) : null}
           </div></div>
 
           <div className="card sec"><div><h3>Avisos</h3><p>Quién se entera cuando entra un lead.</p></div><div className="fs">

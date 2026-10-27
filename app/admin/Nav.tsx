@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { confirmLeave } from "@/lib/dirty";
 
-const ITEMS: [string, string][] = [["/admin", "Formularios"], ["/admin/leads", "Leads"], ["/admin/actividad", "Actividad"]];
+const ITEMS: [string, string][] = [["/admin", "Formularios"], ["/admin/leads", "Leads"], ["/admin/incompletos", "Incompletos"], ["/admin/actividad", "Actividad"]];
 
 export function Nav() {
   const p = usePathname() || "";

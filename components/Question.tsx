@@ -21,12 +21,13 @@ export function ConsentCheck({ field, value, onToggle, privacyUrl, lang, preview
 }
 
 export function Question({
-  field, index, value, onChange, onPick, preview, privacyUrl, lang, attached,
+  field, index, value, onChange, onPick, preview, privacyUrl, lang, attached, notice,
 }: {
   field: Field; index: number; value: string | boolean | undefined;
   onChange?: (v: string) => void; onPick?: (v: string | boolean) => void;
   preview?: boolean; privacyUrl?: string; lang: "es" | "pt";
   attached?: { field: Field; value: string | boolean | undefined; onToggle?: (v: boolean) => void } | null;
+  notice?: string | null;
 }) {
   const tab = preview ? -1 : undefined;
   let input: React.ReactNode;
@@ -69,6 +70,12 @@ export function Question({
         {field.label}{field.required ? <span className="req"> *</span> : null}
       </div>
       {input}
+      {notice ? (
+        <p className="pnotice">
+          {notice}{" "}
+          {privacyUrl ? <a href={privacyUrl} target="_blank" rel="noopener noreferrer">{lang === "es" ? "Política de privacidad" : "Política de privacidade"}</a> : null}
+        </p>
+      ) : null}
       {attached ? <ConsentCheck field={attached.field} value={attached.value} onToggle={attached.onToggle} privacyUrl={privacyUrl} lang={lang} preview={preview} /> : null}
     </div>
   );

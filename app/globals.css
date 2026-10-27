@@ -189,3 +189,5 @@ details.lead summary::-webkit-details-marker{display:none}
 .ccheck{display:flex;gap:12px;align-items:flex-start;margin-top:26px;font-size:13.5px;line-height:1.55;color:var(--pub-soft);cursor:pointer;max-width:56ch}
 .ccheck input{accent-color:var(--leaf-soft);width:18px;height:18px;flex:none;margin:2px 0 0}
 .ccheck a{color:var(--pub-ink)}
+.pnotice{margin:16px 0 0;font-size:12.5px;line-height:1.55;color:var(--pub-soft);max-width:56ch}
+.pnotice a{color:var(--pub-ink)}

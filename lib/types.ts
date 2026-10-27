@@ -25,6 +25,8 @@ export interface FormSettings {
   intro_bullets: string;
   intro_note: string;
   intro_button: string;
+  partial_enabled: boolean;
+  partial_notice: string;
 }
 
 export interface Form {
@@ -78,6 +80,13 @@ export const DEFAULT_SETTINGS: FormSettings = {
   intro_bullets: "",
   intro_note: "",
   intro_button: "",
+  partial_enabled: false,
+  partial_notice: "",
+};
+
+export const PARTIAL_NOTICE = {
+  es: "Guardamos tus datos de contacto desde este paso para poder ayudarte si no terminas el formulario.",
+  pt: "Guardamos seus dados de contato a partir desta etapa para poder ajudar caso você não termine o formulário.",
 };
 
 /** Lo que el navegador del lead puede ver: nunca el token de la Conversions API. */
@@ -100,6 +109,9 @@ export function publicForm(f: Form) {
           note: f.settings.intro_note,
           button: f.settings.intro_button || (f.lang === "pt" ? "Começar" : "Empezar"),
         }
+      : null,
+    partial: f.settings.partial_enabled
+      ? { notice: f.settings.partial_notice || PARTIAL_NOTICE[f.lang] }
       : null,
   };
 }

@@ -65,6 +65,8 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
   // Si la siguiente pregunta es el consentimiento, va como casilla en esta misma pantalla.
   const att = x && x.type !== "consent" && F[i + 1]?.type === "consent" ? F[i + 1] : null;
   const stepAfter = att ? i + 2 : i + 1;
+  // Incompletos: el aviso va en el primer dato de contacto y solo se guarda a partir de ahí.
+  const contactIdx = F.findIndex((f) => f.type === "email" || f.type === "phone");
 
   const submit = useCallback(async (final: Record<string, string | boolean>) => {
     setState("sending");
@@ -75,7 +77,7 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
     try {
       const res = await fetch("/api/submit", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ formId: form.id, answers: final, eventId, hp: hp.current?.value || "", elapsed: Date.now() - started.current, fbp: cookie("_fbp"), fbc, url: location.href.split("?")[0], source: source.current }),
+        body: JSON.stringify({ formId: form.id, session: session.current, answers: final, eventId, hp: hp.current?.value || "", elapsed: Date.now() - started.current, fbp: cookie("_fbp"), fbc, url: location.href.split("?")[0], source: source.current }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) { setErr(j.error || t.fail); setState("form"); return; }
@@ -100,8 +102,14 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
       for (let k = maxStep.current + 1; k <= stepAfter; k++) track("step", k);
       maxStep.current = stepAfter;
     }
-    if (stepAfter < F.length) setI(stepAfter); else submit(a);
-  }, [ans, x, att, stepAfter, F.length, submit, t, track]);
+    if (stepAfter < F.length) {
+      if (form.partial && live && contactIdx >= 0 && stepAfter > contactIdx) {
+        const body = JSON.stringify({ formId: form.id, session: session.current, answers: a, step: stepAfter });
+        fetch("/api/partial", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+      }
+      setI(stepAfter);
+    } else submit(a);
+  }, [ans, x, att, stepAfter, F.length, submit, t, track, form.partial, form.id, live, contactIdx]);
 
   const pick = (v: string | boolean) => {
     const a = { ...ans, [x.id]: v };
@@ -141,6 +149,7 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
             <input ref={hp} className="hp" tabIndex={-1} autoComplete="off" name="website" aria-hidden="true" />
             <Question key={x.id} field={x} index={i} lang={form.lang} privacyUrl={form.privacy_url} value={ans[x.id]}
               onChange={(v) => { setAns({ ...ans, [x.id]: v }); if (err) setErr(""); }} onPick={pick}
+              notice={form.partial && i === contactIdx ? form.partial.notice : null}
               attached={att ? { field: att, value: ans[att.id], onToggle: (c) => { setAns({ ...ans, [att.id]: c }); if (err) setErr(""); } } : null} />
             {err ? <div className="perr" role="alert">{err}</div> : null}
             <div className="pubnav">
