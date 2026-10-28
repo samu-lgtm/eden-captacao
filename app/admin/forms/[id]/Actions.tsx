@@ -27,3 +27,20 @@ export function CopyCsv({ csv }: { csv: string }) {
     }}>{done ? "Copiado" : "Copiar como CSV"}</button>
   );
 }
+
+export function DuplicateButton({ id }: { id: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  return (
+    <>
+      {err ? <span className="errbox">{err}</span> : null}
+      <button className="btn" disabled={busy} onClick={async () => {
+        setBusy(true); setErr("");
+        const r = await fetch(`/api/admin/forms/${id}/duplicate`, { method: "POST" });
+        const j = await r.json().catch(() => ({}));
+        if (r.ok) router.push(`/admin/forms/${j.id}?tab=config`); else { setErr(j.error || "No se pudo duplicar."); setBusy(false); }
+      }}>{busy ? "Duplicando…" : "Duplicar"}</button>
+    </>
+  );
+}

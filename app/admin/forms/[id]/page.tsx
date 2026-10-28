@@ -4,7 +4,7 @@ import { db, getForm } from "@/lib/db";
 import type { Form, ResponseRow } from "@/lib/types";
 import { fmtDT, fmtD, dayKey, pct } from "@/lib/fmt";
 import FormEditor from "./FormEditor";
-import { ResendButton, CopyCsv } from "./Actions";
+import { ResendButton, CopyCsv, DuplicateButton } from "./Actions";
 import { TabBar } from "./TabBar";
 
 type Tab = "editor" | "config" | "respuestas" | "insights";
@@ -20,6 +20,7 @@ function Header({ form }: { form: Form }) {
       </div>
       <div className="row">
         <span className="slug">{link.replace(/^https?:\/\//, "")}</span>
+        <DuplicateButton id={form.id} />
         <a className="btn pri" href={`/${form.slug}${form.status === "ativo" ? "" : "?preview=1"}`} target="_blank" rel="noopener noreferrer">Abrir formulario</a>
       </div>
     </div>
