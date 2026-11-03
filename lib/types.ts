@@ -27,6 +27,8 @@ export interface FormSettings {
   intro_button: string;
   partial_enabled: boolean;
   partial_notice: string;
+  booking_enabled: boolean;
+  qualify_rules: Record<string, string[]>;
 }
 
 export interface Form {
@@ -82,6 +84,8 @@ export const DEFAULT_SETTINGS: FormSettings = {
   intro_button: "",
   partial_enabled: false,
   partial_notice: "",
+  booking_enabled: false,
+  qualify_rules: {},
 };
 
 export const PARTIAL_NOTICE = {

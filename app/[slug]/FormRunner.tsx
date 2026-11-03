@@ -4,6 +4,7 @@ import type { PublicForm } from "@/lib/types";
 import { Question } from "@/components/Question";
 import { Logo } from "@/components/Logo";
 import { Intro } from "@/components/Intro";
+import { Booking } from "@/components/Booking";
 
 type Fbq = ((...a: unknown[]) => void) & { callMethod?: (...a: unknown[]) => void; queue?: unknown[]; loaded?: boolean; version?: string; push?: unknown };
 declare global { interface Window { fbq?: Fbq; _fbq?: Fbq } }
@@ -35,7 +36,8 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
   const [i, setI] = useState(0);
   const [ans, setAns] = useState<Record<string, string | boolean>>({});
   const [err, setErr] = useState("");
-  const [state, setState] = useState<"form" | "sending" | "done">("form");
+  const [state, setState] = useState<"form" | "sending" | "book" | "done">("form");
+  const [booking, setBooking] = useState<{ responseId: string; token: string } | null>(null);
   const [consent, setConsent] = useState<"yes" | "no" | null>(null);
   const [onIntro, setOnIntro] = useState(!!form.intro);
   const session = useRef("");
@@ -82,6 +84,7 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
       const j = await res.json().catch(() => ({}));
       if (!res.ok) { setErr(j.error || t.fail); setState("form"); return; }
       if (consent === "yes" && window.fbq) window.fbq("track", form.event_name, {}, { eventID: eventId });
+      if (j.booking) { setBooking(j.booking); setState("book"); return; }
       if (j.redirect) { setTimeout(() => { location.href = j.redirect; }, 400); }
       setState("done");
     } catch {
@@ -137,11 +140,15 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
 
   return (
     <div className="pub">
-      {onIntro ? null : <div className="progress"><i style={{ width: `${(state === "done" ? 1 : i / F.length) * 100}%` }} /></div>}
+      {onIntro ? null : <div className="progress"><i style={{ width: `${(state === "done" || state === "book" ? 1 : i / F.length) * 100}%` }} /></div>}
       <div className="pubtop"><Logo />{!live ? <span className="hint">{t.paused}</span> : null}</div>
       <div className="pubwrap">
         {onIntro && form.intro ? (
           <Intro intro={form.intro} onStart={() => { started.current = Date.now(); setOnIntro(false); }} />
+        ) : state === "book" && booking ? (
+          <Booking lang={form.lang} r={booking.responseId} t={booking.token} tz={form.lang === "pt" ? "America/Sao_Paulo" : "Europe/Madrid"}
+            onSkip={() => setState("done")}
+            onBooked={(eventId) => { if (consent === "yes" && window.fbq) window.fbq("track", "Schedule", {}, { eventID: eventId }); }} />
         ) : state === "done" ? (
           <div><div className="qn">{t.done}</div><div className="q">{form.thanks}</div></div>
         ) : (

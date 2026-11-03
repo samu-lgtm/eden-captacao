@@ -53,3 +53,21 @@ export async function autoReply(form: Form, r: Pick<ResponseRow, "answers">) {
     return { ok: false as const, error: e instanceof Error ? e.message : "Error SMTP" };
   }
 }
+
+export async function notifyBooking(to: string, b: { name: string; email: string; phone: string; form: string; start: Date; meet: string }) {
+  const t = transport();
+  const list = to.split(/[,;\s]+/).filter(Boolean);
+  if (!t || !list.length) return { ok: false as const, error: "SMTP sin configurar" };
+  const when = b.start.toLocaleString("es-ES", { timeZone: "Europe/Madrid", dateStyle: "full", timeStyle: "short" });
+  try {
+    await t.sendMail({
+      from: process.env.MAIL_FROM || process.env.SMTP_USER,
+      to: list,
+      subject: `Nueva reunión · ${b.name} · ${when}`,
+      html: `<div style="font-family:Arial,sans-serif;color:#2B231F;font-size:14px"><p style="font-size:16px"><b>Nueva reunión reservada</b></p><p>${esc(b.name)} · ${esc(b.email)} · ${esc(b.phone)}<br>${esc(when)} (hora de Madrid)<br>Formulario: ${esc(b.form)}</p>${b.meet ? `<p><a href="${esc(b.meet)}">${esc(b.meet)}</a></p>` : ""}<p style="color:#5B5148;font-size:12px">El evento ya está en tu Google Calendar y la invitación se ha enviado al lead.</p></div>`,
+    });
+    return { ok: true as const };
+  } catch (e) {
+    return { ok: false as const, error: e instanceof Error ? e.message : "Error SMTP" };
+  }
+}

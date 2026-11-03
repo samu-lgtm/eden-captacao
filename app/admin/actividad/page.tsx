@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { fmtDT } from "@/lib/fmt";
 
-const LAB: Record<string, [string, string]> = { meta: ["Meta", "ok"], mail: ["E-mail", "ok"], err: ["Error", "err"], form: ["Formulario", "off"] };
+const LAB: Record<string, [string, string]> = { meta: ["Meta", "ok"], mail: ["E-mail", "ok"], err: ["Error", "err"], form: ["Formulario", "off"], agenda: ["Agenda", "ok"] };
 
 export default async function Actividad() {
   const { data } = await db().from("activity").select("*").order("created_at", { ascending: false }).limit(200);

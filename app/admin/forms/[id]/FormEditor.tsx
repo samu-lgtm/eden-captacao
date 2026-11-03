@@ -192,6 +192,34 @@ export default function FormEditor({ initial, tab: initialTab }: { initial: Form
             <label className="lbl">Política de privacidad<input className="inp" value={s.privacy_url} onChange={(e) => setS({ privacy_url: e.target.value })} /></label>
           </div></div>
 
+          <div className="card sec"><div><h3>Reunión para leads calificados</h3><p>Al terminar, los leads que cumplen los criterios eligen día y hora en tu agenda (Agenda en el menú). Los demás ven el mensaje de agradecimiento. Cada reserva envía a Meta un evento Schedule.</p></div><div className="fs">
+            <label className="chk"><input type="checkbox" checked={s.booking_enabled} onChange={(e) => setS({ booking_enabled: e.target.checked })} />Ofrecer reunión a los leads calificados</label>
+            {s.booking_enabled ? (
+              <>
+                {f.fields.filter((x) => x.type === "select").length ? f.fields.filter((x) => x.type === "select").map((x) => {
+                  const allowed = s.qualify_rules?.[x.id] || [];
+                  const opts = (x.options || []).filter((o) => o.trim());
+                  return (
+                    <div key={x.id} className="lbl" style={{ gap: 6 }}>
+                      <span>{x.label}</span>
+                      <span className="muted" style={{ fontSize: 11.5 }}>{allowed.length ? "Califican solo las respuestas marcadas:" : "Sin filtro en esta pregunta (marca las respuestas que califican):"}</span>
+                      <div style={{ display: "grid", gap: 4 }}>
+                        {opts.map((o) => (
+                          <label key={o} className="chk"><input type="checkbox" checked={allowed.includes(o)} onChange={(e) => {
+                            const next = e.target.checked ? [...allowed, o] : allowed.filter((a) => a !== o);
+                            const rules = { ...(s.qualify_rules || {}) };
+                            if (next.length) rules[x.id] = next; else delete rules[x.id];
+                            setS({ qualify_rules: rules });
+                          }} />{o}</label>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }) : <div className="note">Este formulario no tiene preguntas de opción múltiple: todos los leads verán la agenda.</div>}
+              </>
+            ) : null}
+          </div></div>
+
           <div className="card sec"><div><h3>Meta Ads</h3><p>El Pixel se dispara en el navegador si el lead acepta las cookies. La Conversions API envía el lead desde el servidor siempre, con el mismo ID de evento para que Meta no lo cuente dos veces.</p></div><div className="fs">
             <div className="two">
               <label className="lbl">ID del píxel / conjunto de datos<input className="inp mono" value={s.pixel_id} onChange={(e) => setS({ pixel_id: e.target.value })} /></label>

@@ -45,6 +45,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   for (const k of Object.keys(DEFAULT_SETTINGS) as (keyof FormSettings)[]) {
     if (k in inS) {
       const v = inS[k];
+      if (k === "qualify_rules") {
+        const rules: Record<string, string[]> = {};
+        for (const [fid, opts] of Object.entries((v as Record<string, unknown>) || {})) {
+          const field = fields.find((f) => f.id === fid && f.type === "select");
+          if (!field || !Array.isArray(opts)) continue;
+          const ok = opts.map(String).filter((o) => field.options?.includes(o));
+          if (ok.length) rules[fid] = ok;
+        }
+        s.qualify_rules = rules;
+        continue;
+      }
       (s as unknown as Record<string, unknown>)[k] = typeof DEFAULT_SETTINGS[k] === "boolean" ? !!v : String(v ?? "").trim();
     }
   }

@@ -39,6 +39,8 @@ export default async function FormPage({ params, searchParams }: { params: { id:
   if (tab === "respuestas") {
     const { data } = await db().from("responses").select("*").eq("form_id", form.id).order("created_at", { ascending: false }).limit(500);
     const rs = (data || []) as ResponseRow[];
+    const { data: bd } = await db().from("bookings").select("response_id,start_at").eq("form_id", form.id).eq("status", "confirmada");
+    const meet = new Map(((bd || []) as { response_id: string; start_at: string }[]).map((b) => [b.response_id, b.start_at]));
     const cols = form.fields.filter((f) => f.type !== "consent");
     const csv = [
       ["Recibido", ...form.fields.map((f) => f.label), "Meta", "Origen"].join(";"),
@@ -53,7 +55,7 @@ export default async function FormPage({ params, searchParams }: { params: { id:
         </div>
         {!rs.length ? <div className="card empty">Todavía no hay respuestas.</div> : (
           <div className="card tw"><table>
-            <thead><tr><th>Recibido</th>{cols.map((c) => <th key={c.id}>{c.label.length > 26 ? c.label.slice(0, 24) + "…" : c.label}</th>)}<th>Meta</th><th>Origen</th></tr></thead>
+            <thead><tr><th>Recibido</th>{cols.map((c) => <th key={c.id}>{c.label.length > 26 ? c.label.slice(0, 24) + "…" : c.label}</th>)}<th>Meta</th><th>Reunión</th><th>Origen</th></tr></thead>
             <tbody>{rs.map((r) => (
               <tr key={r.id}>
                 <td className="muted" style={{ whiteSpace: "nowrap" }}>{fmtDT(r.created_at)}</td>
@@ -61,6 +63,7 @@ export default async function FormPage({ params, searchParams }: { params: { id:
                 <td>{r.meta_status === "enviado" ? <span className="pill ok">Enviado</span> : r.meta_status === "erro"
                   ? <span title={r.meta_error || ""}><span className="pill err">Falló</span> <ResendButton id={r.id} /></span>
                   : <span className="pill off">No configurado</span>}</td>
+                <td>{meet.has(r.id) ? <span className="pill ok">{fmtDT(meet.get(r.id)!)}</span> : <span className="muted">—</span>}</td>
                 <td className="muted" style={{ fontSize: 12 }}>{[r.source?.utm_source, r.source?.utm_campaign].filter(Boolean).join(" · ") || (r.source?.fbclid ? "Meta (fbclid)" : "Directo")}</td>
               </tr>
             ))}</tbody>

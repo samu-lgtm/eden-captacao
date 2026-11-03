@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, getForm, logActivity } from "@/lib/db";
 import { sendCapi } from "@/lib/meta";
 import { notifyNewLead, autoReply } from "@/lib/mail";
+import { isQualified, bookingToken } from "@/lib/booking";
+import { getConn, googleConfigured } from "@/lib/google";
 import type { Field } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -91,7 +93,7 @@ export async function POST(req: NextRequest) {
     );
   }
   if (form.settings.notify_email) {
-    tasks.push(notifyNewLead(form, { answers, source }, `${base}/admin/forms/${form.id}?tab=respostas`).then(async (r) => {
+    tasks.push(notifyNewLead(form, { answers, source }, `${base}/admin/forms/${form.id}?tab=respuestas`).then(async (r) => {
       await logActivity(r.ok ? "mail" : "err", r.ok ? `Aviso de nuevo lead (${leadName}) enviado a ${form.settings.notify_to}.` : `No se pudo enviar el aviso por e-mail: ${r.error}`, form.id);
     }));
   }
@@ -100,5 +102,11 @@ export async function POST(req: NextRequest) {
   }
   await Promise.allSettled(tasks);
 
-  return NextResponse.json({ ok: true, redirect: form.settings.redirect_url || null });
+  // Agenda: solo para leads que cumplen los criterios y si Google Calendar está conectado.
+  let booking: { responseId: string; token: string } | null = null;
+  if (form.settings.booking_enabled && isQualified(form, answers) && googleConfigured() && (await getConn())) {
+    booking = { responseId: row.id, token: bookingToken(row.id) };
+  }
+
+  return NextResponse.json({ ok: true, redirect: booking ? null : form.settings.redirect_url || null, booking });
 }
