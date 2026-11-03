@@ -4,6 +4,7 @@ import { db } from "./db";
 import { zonedToUtc, partsIn } from "./tz";
 import { busy as googleBusy, getConn } from "./google";
 import type { Form } from "./types";
+import { walk } from "./logic";
 
 export const AGENDA_TZ = "Europe/Madrid";
 export type Ranges = Record<string, [string, string][]>; // "1".."7" (lunes..domingo) → tramos HH:MM
@@ -41,15 +42,9 @@ export async function getAgenda(): Promise<AgendaConfig> {
   return { ...DEFAULT_AGENDA, ...((data?.value as Partial<AgendaConfig>) || {}) };
 }
 
-/** ¿El lead cumple los criterios del formulario para ver la agenda? Sin criterios, todos califican. */
+/** ¿El lead califica? No ha pasado por ninguna respuesta marcada como "Terminar (no calificado)". */
 export function isQualified(form: Form, answers: Record<string, unknown>): boolean {
-  const rules = form.settings.qualify_rules || {};
-  for (const [fieldId, allowed] of Object.entries(rules)) {
-    if (!Array.isArray(allowed) || !allowed.length) continue;
-    if (!form.fields.some((f) => f.id === fieldId)) continue;
-    if (!allowed.includes(String(answers[fieldId] ?? ""))) return false;
-  }
-  return true;
+  return walk(form.fields, answers).qualified;
 }
 
 const secret = () => process.env.SESSION_SECRET || "";

@@ -22,7 +22,7 @@ const T = {
 
 export function Booking({ lang, r, t, tz, onSkip, onBooked }: {
   lang: "es" | "pt"; r: string; t: string; tz: string;
-  onSkip: () => void; onBooked: (eventId: string) => void;
+  onSkip: () => void; onBooked: (eventId: string, event: string) => void;
 }) {
   const L = T[lang];
   const loc = lang === "es" ? "es-ES" : "pt-BR";
@@ -72,7 +72,7 @@ export function Booking({ lang, r, t, tz, onSkip, onBooked }: {
     try {
       const res = await fetch("/api/book", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ r, t, start: sel, eventId, fbp: cookie("_fbp"), fbc: cookie("_fbc") }) });
       const j = await res.json().catch(() => ({}));
-      if (res.ok) { setDone(j.start); onBooked(eventId); return; }
+      if (res.ok) { setDone(j.start); onBooked(eventId, String(j.event || "Schedule")); return; }
       if (j.taken) { setErr(L.taken); setSel(""); await load(); } else if (res.status === 409 && j.start) { setDone(j.start); }
       else setErr(j.error || L.fail);
     } catch { setErr(L.fail); }

@@ -7,6 +7,8 @@ export interface Field {
   required: boolean;
   options?: string[];
   text?: string;
+  /** Opción → "next" | "end" | "goto:<id>" (solo preguntas de opción múltiple). */
+  logic?: Record<string, string>;
 }
 
 export interface FormSettings {
@@ -29,6 +31,12 @@ export interface FormSettings {
   partial_notice: string;
   booking_enabled: boolean;
   qualify_rules: Record<string, string[]>;
+  event_qualified: string;
+  event_unqualified: string;
+  event_schedule: string;
+  dq_message: string;
+  dq_button_label: string;
+  dq_button_url: string;
 }
 
 export interface Form {
@@ -86,7 +94,16 @@ export const DEFAULT_SETTINGS: FormSettings = {
   partial_notice: "",
   booking_enabled: false,
   qualify_rules: {},
+  event_qualified: "LeadCalificado",
+  event_unqualified: "Formulario_Enviado",
+  event_schedule: "Reunion_Agendada",
+  dq_message: "",
+  dq_button_label: "",
+  dq_button_url: "",
 };
+
+/** Eventos estándar de Meta (se envían con fbq('track')); el resto son personalizados (fbq('trackCustom')). */
+export const META_STANDARD_EVENTS = ["Lead", "CompleteRegistration", "Contact", "Schedule", "SubmitApplication"];
 
 export const PARTIAL_NOTICE = {
   es: "Guardamos tus datos de contacto desde este paso para poder ayudarte si no terminas el formulario.",
@@ -105,6 +122,7 @@ export function publicForm(f: Form) {
     redirect_url: f.settings.redirect_url,
     pixel_id: f.settings.pixel_id,
     event_name: f.settings.event_name || "Lead",
+    dq: f.settings.dq_message ? { message: f.settings.dq_message, label: f.settings.dq_button_label, url: f.settings.dq_button_url } : null,
     privacy_url: f.settings.privacy_url,
     intro: f.settings.intro_enabled
       ? {

@@ -120,7 +120,7 @@ export default function FormEditor({ initial, tab: initialTab }: { initial: Form
               {f.fields.map((x, i) => (
                 <div key={x.id} className={`card fld ${x.id === sel ? "sel" : ""}`} onClick={(e) => { if (!(e.target as HTMLElement).closest("button,input,textarea,select,label")) setSel(x.id); }}>
                   <span className="n">{i + 1}</span>
-                  <div style={{ minWidth: 0 }}><div className="t">{x.label}{x.required ? " *" : ""}</div><div className="k">{FIELD_TYPES[x.type]}</div></div>
+                  <div style={{ minWidth: 0 }}><div className="t">{x.label}{x.required ? " *" : ""}</div><div className="k">{FIELD_TYPES[x.type]}{x.logic && Object.keys(x.logic).length ? ` · lógica en ${Object.keys(x.logic).length} respuesta(s)` : ""}</div></div>
                   <div className="row" style={{ gap: 2 }}>
                     <button className="ib" aria-label="Subir" onClick={() => move(x.id, -1)}>↑</button>
                     <button className="ib" aria-label="Bajar" onClick={() => move(x.id, 1)}>↓</button>
@@ -133,6 +133,30 @@ export default function FormEditor({ initial, tab: initialTab }: { initial: Form
                         <label className="lbl">Opciones (una por línea)
                           <textarea className="inp" value={(x.options || []).join("\n")} onChange={(e) => setField(x.id, { options: e.target.value.split("\n") })} />
                         </label>
+                      ) : null}
+                      {x.type === "select" ? (
+                        <div className="lbl" style={{ gap: 6 }}>
+                          <span>Lógica: qué pasa con cada respuesta</span>
+                          {(x.options || []).filter((o) => o.trim()).map((o) => {
+                            const act = x.logic?.[o] || "next";
+                            const later = f.fields.slice(f.fields.indexOf(x) + 1).filter((y) => y.type !== "consent");
+                            return (
+                              <div key={o} className="logicrow">
+                                <span className="lopt">{o}</span>
+                                <select className="inp" value={act} onChange={(e) => {
+                                  const logic = { ...(x.logic || {}) };
+                                  if (e.target.value === "next") delete logic[o]; else logic[o] = e.target.value;
+                                  setField(x.id, { logic });
+                                }}>
+                                  <option value="next">Continuar</option>
+                                  <option value="end">Terminar · no calificado</option>
+                                  {later.map((y) => <option key={y.id} value={`goto:${y.id}`}>Ir a: {f.fields.indexOf(y) + 1}. {y.label.slice(0, 40)}</option>)}
+                                </select>
+                              </div>
+                            );
+                          })}
+                          <span className="muted" style={{ fontSize: 11.5 }}>&quot;Terminar · no calificado&quot; salta al consentimiento y al final muestra la pantalla de no calificado (sin agenda).</span>
+                        </div>
                       ) : null}
                       {x.type === "consent" ? (
                         <label className="lbl">Texto de consentimiento<textarea className="inp" value={x.text || ""} onChange={(e) => setField(x.id, { text: e.target.value })} /></label>
@@ -192,39 +216,28 @@ export default function FormEditor({ initial, tab: initialTab }: { initial: Form
             <label className="lbl">Política de privacidad<input className="inp" value={s.privacy_url} onChange={(e) => setS({ privacy_url: e.target.value })} /></label>
           </div></div>
 
-          <div className="card sec"><div><h3>Reunión para leads calificados</h3><p>Al terminar, los leads que cumplen los criterios eligen día y hora en tu agenda (Agenda en el menú). Los demás ven el mensaje de agradecimiento. Cada reserva envía a Meta un evento Schedule.</p></div><div className="fs">
+          <div className="card sec"><div><h3>Reunión para leads calificados</h3><p>Al terminar, los leads calificados (los que no pasan por ninguna respuesta con &quot;Terminar · no calificado&quot;) eligen día y hora en tu agenda. La lógica se define en el Editor, en cada pregunta de opción múltiple.</p></div><div className="fs">
             <label className="chk"><input type="checkbox" checked={s.booking_enabled} onChange={(e) => setS({ booking_enabled: e.target.checked })} />Ofrecer reunión a los leads calificados</label>
-            {s.booking_enabled ? (
-              <>
-                {f.fields.filter((x) => x.type === "select").length ? f.fields.filter((x) => x.type === "select").map((x) => {
-                  const allowed = s.qualify_rules?.[x.id] || [];
-                  const opts = (x.options || []).filter((o) => o.trim());
-                  return (
-                    <div key={x.id} className="lbl" style={{ gap: 6 }}>
-                      <span>{x.label}</span>
-                      <span className="muted" style={{ fontSize: 11.5 }}>{allowed.length ? "Califican solo las respuestas marcadas:" : "Sin filtro en esta pregunta (marca las respuestas que califican):"}</span>
-                      <div style={{ display: "grid", gap: 4 }}>
-                        {opts.map((o) => (
-                          <label key={o} className="chk"><input type="checkbox" checked={allowed.includes(o)} onChange={(e) => {
-                            const next = e.target.checked ? [...allowed, o] : allowed.filter((a) => a !== o);
-                            const rules = { ...(s.qualify_rules || {}) };
-                            if (next.length) rules[x.id] = next; else delete rules[x.id];
-                            setS({ qualify_rules: rules });
-                          }} />{o}</label>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                }) : <div className="note">Este formulario no tiene preguntas de opción múltiple: todos los leads verán la agenda.</div>}
-              </>
-            ) : null}
+          </div></div>
+
+          <div className="card sec"><div><h3>Pantalla de no calificado</h3><p>Lo que ve quien pasa por una respuesta &quot;Terminar · no calificado&quot;. Si la dejas vacía, ve el mensaje de agradecimiento normal.</p></div><div className="fs">
+            <label className="lbl">Mensaje<textarea className="inp" rows={3} value={s.dq_message} onChange={(e) => setS({ dq_message: e.target.value })} placeholder={f.lang === "pt" ? "Obrigado pelo interesse! No momento…" : "Gracias por tu interés. Ahora mismo…"} /></label>
+            <div className="two">
+              <label className="lbl">Texto del botón (opcional)<input className="inp" value={s.dq_button_label} onChange={(e) => setS({ dq_button_label: e.target.value })} /></label>
+              <label className="lbl">Enlace del botón<input className="inp" value={s.dq_button_url} onChange={(e) => setS({ dq_button_url: e.target.value })} placeholder="https://" /></label>
+            </div>
           </div></div>
 
           <div className="card sec"><div><h3>Meta Ads</h3><p>El Pixel se dispara en el navegador si el lead acepta las cookies. La Conversions API envía el lead desde el servidor siempre, con el mismo ID de evento para que Meta no lo cuente dos veces.</p></div><div className="fs">
             <div className="two">
               <label className="lbl">ID del píxel / conjunto de datos<input className="inp mono" value={s.pixel_id} onChange={(e) => setS({ pixel_id: e.target.value })} /></label>
-              <label className="lbl">Evento<select className="inp" value={s.event_name} onChange={(e) => setS({ event_name: e.target.value })}>{["Lead", "CompleteRegistration", "Contact", "SubmitApplication"].map((x) => <option key={x}>{x}</option>)}</select></label>
+              <span />
             </div>
+            <div className="two">
+              <label className="lbl">Evento · lead calificado<input className="inp mono" value={s.event_qualified} onChange={(e) => setS({ event_qualified: e.target.value.replace(/[^\w]/g, "") })} /></label>
+              <label className="lbl">Evento · lead no calificado<input className="inp mono" value={s.event_unqualified} onChange={(e) => setS({ event_unqualified: e.target.value.replace(/[^\w]/g, "") })} /></label>
+            </div>
+            <label className="lbl">Evento · reunión agendada<input className="inp mono" value={s.event_schedule} onChange={(e) => setS({ event_schedule: e.target.value.replace(/[^\w]/g, "") })} /></label>
             <label className="lbl">Token de acceso de la Conversions API<input className="inp mono" type="password" autoComplete="off" value={s.capi_token} onChange={(e) => setS({ capi_token: e.target.value })} placeholder="Se genera en el Administrador de eventos" /></label>
             <label className="lbl">Código de prueba (opcional, para Probar eventos)<input className="inp mono" value={s.test_event_code} onChange={(e) => setS({ test_event_code: e.target.value })} placeholder="TEST12345" /></label>
             <div className="note">Se envían cifrados en SHA-256: e-mail, teléfono, nombre y país, además de fbp/fbc, IP y navegador. Quita el código de prueba antes de activar las campañas.</div>

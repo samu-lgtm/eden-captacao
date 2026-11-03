@@ -57,13 +57,14 @@ export async function POST(req: NextRequest) {
   await logActivity("agenda", `Reunión reservada por ${name} para ${start.toLocaleString("es-ES", { timeZone: AGENDA_TZ, dateStyle: "medium", timeStyle: "short" })} (hora de Madrid).`, form.id);
 
   const tasks: Promise<unknown>[] = [];
+  const scheduleEvent = form.settings.event_schedule || "Reunion_Agendada";
   if (form.settings.pixel_id && form.settings.capi_token) {
     const eventId = typeof b.eventId === "string" && /^[\w-]{6,64}$/.test(b.eventId) ? b.eventId : crypto.randomUUID();
-    tasks.push(sendCapi(form, { id: resp.id, answers: resp.answers, event_id: eventId }, { ip: resp.ip, userAgent: resp.user_agent, fbp: b.fbp, fbc: b.fbc }, "Schedule").then((r) =>
-      logActivity(r.ok ? "meta" : "err", r.ok ? `Evento Schedule de ${name} enviado a Meta.` : `Meta rechazó el evento Schedule de ${name}: ${r.error}`, form.id)));
+    tasks.push(sendCapi(form, { id: resp.id, answers: resp.answers, event_id: eventId }, { ip: resp.ip, userAgent: resp.user_agent, fbp: b.fbp, fbc: b.fbc }, scheduleEvent).then((r) =>
+      logActivity(r.ok ? "meta" : "err", r.ok ? `Evento ${scheduleEvent} de ${name} enviado a Meta.` : `Meta rechazó el evento ${scheduleEvent} de ${name}: ${r.error}`, form.id)));
   }
   tasks.push(notifyBooking(cfg.notify_to, { name, email, phone, form: form.name, start, meet: ev.hangoutLink || "" }));
   await Promise.allSettled(tasks);
 
-  return NextResponse.json({ ok: true, start: start.toISOString(), end: end.toISOString(), meet: ev.hangoutLink || null });
+  return NextResponse.json({ ok: true, start: start.toISOString(), end: end.toISOString(), meet: ev.hangoutLink || null, event: scheduleEvent });
 }

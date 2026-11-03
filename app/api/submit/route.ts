@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, getForm, logActivity } from "@/lib/db";
 import { sendCapi } from "@/lib/meta";
 import { notifyNewLead, autoReply } from "@/lib/mail";
-import { isQualified, bookingToken } from "@/lib/booking";
+import { bookingToken } from "@/lib/booking";
 import { getConn, googleConfigured } from "@/lib/google";
 import type { Field } from "@/lib/types";
+import { walk } from "@/lib/logic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,13 +43,23 @@ export async function POST(req: NextRequest) {
   const form = body.formId ? await getForm(body.formId) : null;
   if (!form || form.status !== "ativo") return NextResponse.json({ error: "Este formulario no está disponible." }, { status: 404 });
 
-  const answers: Record<string, string | boolean> = {};
+  const raw: Record<string, string | boolean> = {};
   for (const f of form.fields) {
+    const v = body.answers?.[f.id];
+    if (typeof v === "string") raw[f.id] = v.trim();
+    else if (v === true) raw[f.id] = true;
+  }
+  // Solo cuentan las preguntas que el lead ha visto según la lógica de saltos.
+  const path = walk(form.fields, raw);
+  const answers: Record<string, string | boolean> = {};
+  for (const f of path.visited) {
     const v = body.answers?.[f.id];
     if (typeof v === "string") answers[f.id] = v.trim();
     else if (v === true) answers[f.id] = true;
   }
-  const err = validate(form.fields, answers);
+  const err = validate(path.visited, answers);
+  const qualified = path.qualified;
+  const eventName = (qualified ? form.settings.event_qualified : form.settings.event_unqualified) || form.settings.event_name || "Lead";
   if (err) return NextResponse.json({ error: err }, { status: 422 });
 
   const eventId = typeof body.eventId === "string" && /^[\w-]{6,64}$/.test(body.eventId) ? body.eventId : crypto.randomUUID();
@@ -63,7 +74,7 @@ export async function POST(req: NextRequest) {
 
   const { data: row, error } = await db()
     .from("responses")
-    .insert({ form_id: form.id, answers, source, event_id: eventId, ip, user_agent: userAgent, meta_status: "off" })
+    .insert({ form_id: form.id, answers, source, event_id: eventId, ip, user_agent: userAgent, meta_status: "off", qualified })
     .select("id")
     .single();
   if (error || !row) {
@@ -84,10 +95,10 @@ export async function POST(req: NextRequest) {
 
   if (form.settings.pixel_id && form.settings.capi_token) {
     tasks.push(
-      sendCapi(form, { id: row.id, answers, event_id: eventId }, { ip, userAgent, fbp: body.fbp, fbc: body.fbc, url: body.url }).then(async (r) => {
+      sendCapi(form, { id: row.id, answers, event_id: eventId }, { ip, userAgent, fbp: body.fbp, fbc: body.fbc, url: body.url }, eventName).then(async (r) => {
         await db().from("responses").update({ meta_status: r.ok ? "enviado" : "erro", meta_error: r.ok ? null : r.error }).eq("id", row.id);
         await logActivity(r.ok ? "meta" : "err", r.ok
-          ? `Lead de ${leadName} enviado a Meta (Conversions API, ${form.settings.event_name}).`
+          ? `Lead de ${leadName} (${qualified ? "calificado" : "no calificado"}) enviado a Meta como ${eventName}.`
           : `Conversions API rechazó el lead de ${leadName}: ${r.error}`, form.id);
       }),
     );
@@ -104,9 +115,9 @@ export async function POST(req: NextRequest) {
 
   // Agenda: solo para leads que cumplen los criterios y si Google Calendar está conectado.
   let booking: { responseId: string; token: string } | null = null;
-  if (form.settings.booking_enabled && isQualified(form, answers) && googleConfigured() && (await getConn())) {
+  if (form.settings.booking_enabled && qualified && googleConfigured() && (await getConn())) {
     booking = { responseId: row.id, token: bookingToken(row.id) };
   }
 
-  return NextResponse.json({ ok: true, redirect: booking ? null : form.settings.redirect_url || null, booking });
+  return NextResponse.json({ ok: true, qualified, event: eventName, redirect: booking || !qualified ? null : form.settings.redirect_url || null, booking });
 }

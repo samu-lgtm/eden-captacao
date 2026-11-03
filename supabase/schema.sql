@@ -110,3 +110,5 @@ create table if not exists bookings (
 create index if not exists bookings_start_idx on bookings(start_at);
 create unique index if not exists bookings_response_uniq on bookings(response_id) where status = 'confirmada';
 alter table bookings enable row level security;
+-- Eden Captación · lógica de saltos y eventos por resultado
+alter table responses add column if not exists qualified boolean;

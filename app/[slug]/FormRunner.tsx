@@ -1,6 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PublicForm } from "@/lib/types";
+import { META_STANDARD_EVENTS } from "@/lib/types";
+import { nextIndex } from "@/lib/logic";
 import { Question } from "@/components/Question";
 import { Logo } from "@/components/Logo";
 import { Intro } from "@/components/Intro";
@@ -38,6 +40,8 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
   const [err, setErr] = useState("");
   const [state, setState] = useState<"form" | "sending" | "book" | "done">("form");
   const [booking, setBooking] = useState<{ responseId: string; token: string } | null>(null);
+  const [qualified, setQualified] = useState(true);
+  const history = useRef<number[]>([]);
   const [consent, setConsent] = useState<"yes" | "no" | null>(null);
   const [onIntro, setOnIntro] = useState(!!form.intro);
   const session = useRef("");
@@ -64,9 +68,14 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
   useEffect(() => { if (consent === "yes" && form.pixel_id) loadPixel(form.pixel_id); }, [consent, form.pixel_id]);
 
   const x = F[i];
-  // Si la siguiente pregunta es el consentimiento, va como casilla en esta misma pantalla.
-  const att = x && x.type !== "consent" && F[i + 1]?.type === "consent" ? F[i + 1] : null;
-  const stepAfter = att ? i + 2 : i + 1;
+  // Siguiente paso según la lógica de saltos. Si toca el consentimiento, va como casilla en esta misma pantalla.
+  const stepFor = (a: Record<string, string | boolean>) => {
+    if (!x) return { att: null, stepAfter: F.length };
+    const n = x.type === "consent" ? i + 1 : nextIndex(F, i, a);
+    const at = x.type !== "consent" && F[n]?.type === "consent" ? F[n] : null;
+    return { att: at, stepAfter: at ? n + 1 : n };
+  };
+  const { att, stepAfter } = stepFor(ans);
   // Incompletos: el aviso va en el primer dato de contacto y solo se guarda a partir de ahí.
   const contactIdx = F.findIndex((f) => f.type === "email" || f.type === "phone");
 
@@ -83,7 +92,9 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) { setErr(j.error || t.fail); setState("form"); return; }
-      if (consent === "yes" && window.fbq) window.fbq("track", form.event_name, {}, { eventID: eventId });
+      const ev = String(j.event || form.event_name);
+      if (consent === "yes" && window.fbq) window.fbq(META_STANDARD_EVENTS.includes(ev) ? "track" : "trackCustom", ev, {}, { eventID: eventId });
+      setQualified(j.qualified !== false);
       if (j.booking) { setBooking(j.booking); setState("book"); return; }
       if (j.redirect) { setTimeout(() => { location.href = j.redirect; }, 400); }
       setState("done");
@@ -94,6 +105,7 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
 
   const next = useCallback((override?: Record<string, string | boolean>) => {
     const a = override || ans;
+    const { att, stepAfter } = stepFor(a);
     const v = a[x.id];
     const empty = v === undefined || v === "" || v === false;
     if (x.required && empty) { setErr(x.type === "consent" ? t.consent : t.req); return; }
@@ -110,15 +122,17 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
         const body = JSON.stringify({ formId: form.id, session: session.current, answers: a, step: stepAfter });
         fetch("/api/partial", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
       }
+      history.current.push(i);
       setI(stepAfter);
     } else submit(a);
-  }, [ans, x, att, stepAfter, F.length, submit, t, track, form.partial, form.id, live, contactIdx]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ans, x, i, F, submit, t, track, form.partial, form.id, live, contactIdx]);
 
   const pick = (v: string | boolean) => {
     const a = { ...ans, [x.id]: v };
     setAns(a); setErr("");
     // Con casilla de consentimiento en la pantalla no se avanza solo: el lead la marca y pulsa Enviar.
-    if (v !== false && !att) setTimeout(() => next(a), 180);
+    if (v !== false && !stepFor(a).att) setTimeout(() => next(a), 180);
   };
 
   useEffect(() => {
@@ -148,9 +162,17 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
         ) : state === "book" && booking ? (
           <Booking lang={form.lang} r={booking.responseId} t={booking.token} tz={form.lang === "pt" ? "America/Sao_Paulo" : "Europe/Madrid"}
             onSkip={() => setState("done")}
-            onBooked={(eventId) => { if (consent === "yes" && window.fbq) window.fbq("track", "Schedule", {}, { eventID: eventId }); }} />
+            onBooked={(eventId, ev) => { if (consent === "yes" && window.fbq) window.fbq(META_STANDARD_EVENTS.includes(ev) ? "track" : "trackCustom", ev, {}, { eventID: eventId }); }} />
         ) : state === "done" ? (
-          <div><div className="qn">{t.done}</div><div className="q">{form.thanks}</div></div>
+          !qualified && form.dq ? (
+            <div>
+              <div className="qn">{t.done}</div>
+              <div className="q">{form.dq.message}</div>
+              {form.dq.url && form.dq.label ? <div className="pubnav"><a className="pbtn" href={form.dq.url} target="_blank" rel="noopener noreferrer">{form.dq.label} →</a></div> : null}
+            </div>
+          ) : (
+            <div><div className="qn">{t.done}</div><div className="q">{form.thanks}</div></div>
+          )
         ) : (
           <form onSubmit={(e) => { e.preventDefault(); next(); }} noValidate>
             <input ref={hp} className="hp" tabIndex={-1} autoComplete="off" name="website" aria-hidden="true" />
@@ -161,10 +183,9 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
             {err ? <div className="perr" role="alert">{err}</div> : null}
             <div className="pubnav">
               <button className="pbtn" type="submit" disabled={state === "sending"}>{state === "sending" ? t.sending : stepAfter >= F.length ? t.send : t.next}</button>
-              {i > 0 ? <button className="pbtn alt" type="button" onClick={() => {
+              {history.current.length ? <button className="pbtn alt" type="button" onClick={() => {
                 setErr("");
-                const back = i >= 2 && F[i - 1].type === "consent" && F[i - 2].type !== "consent" ? i - 2 : i - 1;
-                setI(back);
+                setI(history.current.pop() ?? 0);
               }}>{t.back}</button> : null}
               <span className="hint">{t.enter}</span>
             </div>

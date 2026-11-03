@@ -24,8 +24,20 @@ function cleanFields(input: unknown): Field[] | string {
       f.options = opts.slice(0, 20);
     }
     if (type === "consent") f.text = String(raw.text || "").slice(0, 2000);
+    if (type === "select" && raw.logic && typeof raw.logic === "object") f.logic = raw.logic as Record<string, string>;
     out.push(f);
   }
+  // Lógica: solo opciones existentes y saltos hacia preguntas posteriores.
+  out.forEach((f, i) => {
+    if (!f.logic) return;
+    const clean: Record<string, string> = {};
+    for (const [opt, act] of Object.entries(f.logic)) {
+      if (!f.options?.includes(opt)) continue;
+      if (act === "end") clean[opt] = act;
+      else if (typeof act === "string" && act.startsWith("goto:") && out.findIndex((x) => x.id === act.slice(5)) > i) clean[opt] = act;
+    }
+    if (Object.keys(clean).length) f.logic = clean; else delete f.logic;
+  });
   return out;
 }
 
