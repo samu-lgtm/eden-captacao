@@ -6,13 +6,14 @@ import { bookingToken } from "@/lib/booking";
 import { getConn, googleConfigured } from "@/lib/google";
 import type { Field } from "@/lib/types";
 import { walk } from "@/lib/logic";
+import { validPhone } from "@/lib/phone";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function validate(fields: Field[], answers: Record<string, unknown>): string | null {
+function validate(fields: Field[], answers: Record<string, unknown>, lang: "es" | "pt"): string | null {
   for (const f of fields) {
     const v = answers[f.id];
     const empty = v === undefined || v === null || v === "" || v === false;
@@ -22,7 +23,7 @@ function validate(fields: Field[], answers: Record<string, unknown>): string | n
     if (f.type !== "consent" && typeof v !== "string") return `Respuesta no válida: ${f.label}`;
     if (typeof v === "string" && v.length > 2000) return `Respuesta demasiado larga: ${f.label}`;
     if (f.type === "email" && !EMAIL.test(String(v))) return "E-mail no válido";
-    if (f.type === "phone" && String(v).replace(/\D/g, "").length < 8) return "Teléfono no válido";
+    if (f.type === "phone" && !validPhone(String(v), lang)) return lang === "pt" ? "Telefone inválido. Confira o DDD e o número." : "Teléfono no válido. Revisa el número.";
     if (f.type === "select" && f.options && !f.options.includes(String(v))) return `Opción no válida: ${f.label}`;
   }
   return null;
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
     if (typeof v === "string") answers[f.id] = v.trim();
     else if (v === true) answers[f.id] = true;
   }
-  const err = validate(path.visited, answers);
+  const err = validate(path.visited, answers, form.lang);
   const qualified = path.qualified;
   const eventName = (qualified ? form.settings.event_qualified : form.settings.event_unqualified) || form.settings.event_name || "Lead";
   if (err) return NextResponse.json({ error: err }, { status: 422 });

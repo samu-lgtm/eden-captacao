@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PublicForm } from "@/lib/types";
 import { META_STANDARD_EVENTS } from "@/lib/types";
 import { nextIndex } from "@/lib/logic";
+import { validPhone } from "@/lib/phone";
 import { Question } from "@/components/Question";
 import { Logo } from "@/components/Logo";
 import { Intro } from "@/components/Intro";
@@ -12,9 +13,9 @@ type Fbq = ((...a: unknown[]) => void) & { callMethod?: (...a: unknown[]) => voi
 declare global { interface Window { fbq?: Fbq; _fbq?: Fbq } }
 
 const T = {
-  es: { next: "Continuar", send: "Enviar", back: "Atrás", enter: "o pulsa Enter ↵", req: "Esta pregunta es obligatoria.", consent: "Para continuar, acepta el tratamiento de los datos.", email: "Ese e-mail parece incompleto. Revísalo.", phone: "Incluye el número completo.", sending: "Enviando…", done: "Enviado", fail: "No hemos podido enviar tus datos. Inténtalo de nuevo.", paused: "Vista previa: este formulario está en pausa y los envíos no se guardan.",
+  es: { next: "Continuar", send: "Enviar", back: "Atrás", enter: "o pulsa Enter ↵", req: "Esta pregunta es obligatoria.", consent: "Para continuar, acepta el tratamiento de los datos.", email: "Ese e-mail parece incompleto. Revísalo.", phone: "Ese teléfono no parece válido. Revisa el número (con prefijo si no es de España).", sending: "Enviando…", done: "Enviado", fail: "No hemos podido enviar tus datos. Inténtalo de nuevo.", paused: "Vista previa: este formulario está en pausa y los envíos no se guardan.",
     cookie: "Usamos cookies de Meta para medir nuestras campañas. Puedes aceptarlas o seguir sin ellas.", accept: "Aceptar", reject: "Rechazar", policy: "Más información" },
-  pt: { next: "Continuar", send: "Enviar", back: "Voltar", enter: "ou pressione Enter ↵", req: "Esta pergunta é obrigatória.", consent: "Para continuar, aceite o tratamento dos dados.", email: "Esse e-mail parece incompleto. Confira.", phone: "Inclua o número completo, com DDD.", sending: "Enviando…", done: "Enviado", fail: "Não conseguimos enviar seus dados. Tente de novo.", paused: "Pré-visualização: este formulário está pausado e os envios não são salvos.",
+  pt: { next: "Continuar", send: "Enviar", back: "Voltar", enter: "ou pressione Enter ↵", req: "Esta pergunta é obrigatória.", consent: "Para continuar, aceite o tratamento dos dados.", email: "Esse e-mail parece incompleto. Confira.", phone: "Esse telefone não parece válido. Confira o DDD e o número.", sending: "Enviando…", done: "Enviado", fail: "Não conseguimos enviar seus dados. Tente de novo.", paused: "Pré-visualização: este formulário está pausado e os envios não são salvos.",
     cookie: "Usamos cookies da Meta para medir nossas campanhas. Você pode aceitar ou seguir sem elas.", accept: "Aceitar", reject: "Recusar", policy: "Saiba mais" },
 };
 
@@ -110,7 +111,7 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
     const empty = v === undefined || v === "" || v === false;
     if (x.required && empty) { setErr(x.type === "consent" ? t.consent : t.req); return; }
     if (!empty && x.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v).trim())) { setErr(t.email); return; }
-    if (!empty && x.type === "phone" && String(v).replace(/\D/g, "").length < 8) { setErr(t.phone); return; }
+    if (!empty && x.type === "phone" && !validPhone(String(v), form.lang)) { setErr(t.phone); return; }
     if (att && att.required && a[att.id] !== true) { setErr(t.consent); return; }
     setErr("");
     if (stepAfter > maxStep.current) {
