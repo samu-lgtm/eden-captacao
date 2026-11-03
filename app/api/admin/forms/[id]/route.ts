@@ -45,6 +45,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const current = await getForm(params.id);
   if (!current) return NextResponse.json({ error: "Formulario no encontrado" }, { status: 404 });
   const b = await req.json();
+  // Si el formulario ha cambiado desde que se abrió el editor (otra pestaña, o un ajuste hecho por Claude), no se pisa.
+  if (b.updated_at && current.updated_at && new Date(b.updated_at).getTime() !== new Date(current.updated_at).getTime()) {
+    return NextResponse.json({ error: "Este formulario se ha modificado desde que lo abriste. Recarga la página (tus cambios sin guardar se perderán) y vuelve a hacerlos." }, { status: 409 });
+  }
 
   const fields = cleanFields(b.fields);
   if (typeof fields === "string") return NextResponse.json({ error: fields }, { status: 422 });
@@ -73,6 +77,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
   s.pixel_id = s.pixel_id.replace(/\s/g, "");
 
+  const stamp = new Date().toISOString();
   const { data: updated, error } = await db()
     .from("forms")
     .update({
@@ -83,7 +88,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       lang: b.lang === "pt" ? "pt" : "es",
       fields,
       settings: s,
-      updated_at: new Date().toISOString(),
+      updated_at: stamp,
     })
     .eq("id", params.id)
     .select("id, status");
@@ -98,7 +103,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
   console.log("[forms PUT] guardado", params.id, updated[0].status);
   if (current.status !== b.status) await logActivity("form", `${current.name}: ${b.status === "ativo" ? "activado" : "pausado"}.`, params.id);
-  return NextResponse.json({ ok: true, slug });
+  return NextResponse.json({ ok: true, slug, updated_at: stamp });
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {

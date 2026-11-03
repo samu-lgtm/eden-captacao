@@ -68,7 +68,7 @@ export default function FormEditor({ initial, tab: initialTab }: { initial: Form
     const j = await r.json().catch(() => ({}));
     setBusy(false);
     if (!r.ok) { setMsg({ ok: false, text: j.error || "No se pudo guardar." }); return; }
-    const next = { ...f, slug: j.slug || f.slug };
+    const next = { ...f, slug: j.slug || f.slug, updated_at: j.updated_at || f.updated_at };
     setF(next); setSaved(JSON.stringify(next));
     setMsg({ ok: true, text: "Guardado" });
     router.refresh();
