@@ -23,6 +23,8 @@ export async function PUT(req: NextRequest) {
     step: num(b.step, 15, 60, DEFAULT_AGENDA.step),
     ranges,
     notify_to: String(b.notify_to || "").trim().slice(0, 300),
+    max_days: num(b.max_days, 1, 30, DEFAULT_AGENDA.max_days),
+    br_from: HHMM.test(String(b.br_from || "")) ? String(b.br_from) : DEFAULT_AGENDA.br_from,
   };
   const { error } = await db().from("app_settings").upsert({ key: "agenda", value: cfg, updated_at: new Date().toISOString() });
   return error ? NextResponse.json({ error: error.message }, { status: 500 }) : NextResponse.json({ ok: true });

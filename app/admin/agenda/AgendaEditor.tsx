@@ -74,8 +74,9 @@ export function AgendaEditor({ initial }: { initial: AgendaConfig }) {
         </div>
         <div className="two">
           <label className="lbl">Antelación mínima<select className="inp" value={c.notice} onChange={(e) => setC({ ...c, notice: Number(e.target.value) })}>{[1, 2, 4, 12, 24, 48].map((h) => <option key={h} value={h}>{h} h</option>)}</select></label>
-          <label className="lbl">Reservas hasta<select className="inp" value={c.horizon} onChange={(e) => setC({ ...c, horizon: Number(e.target.value) })}>{[7, 14, 21, 30, 60].map((d) => <option key={d} value={d}>{d} días vista</option>)}</select></label>
+          <label className="lbl">Días que ve el lead<select className="inp" value={c.max_days} onChange={(e) => setC({ ...c, max_days: Number(e.target.value) })}>{[3, 4, 5, 7, 10].map((d) => <option key={d} value={d}>Los próximos {d} días con hueco</option>)}</select></label>
         </div>
+        <label className="lbl">Leads de Brasil: primera hora que se les ofrece (hora de Brasilia)<input className="inp" type="time" style={{ maxWidth: 140 }} value={c.br_from} onChange={(e) => setC({ ...c, br_from: e.target.value })} /></label>
         <label className="lbl">Aviso de nueva reunión por e-mail a<input className="inp" value={c.notify_to} onChange={(e) => setC({ ...c, notify_to: e.target.value })} /></label>
       </div></div>
 

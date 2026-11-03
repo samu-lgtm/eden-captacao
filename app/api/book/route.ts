@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, getForm, logActivity } from "@/lib/db";
-import { getAgenda, freeSlots, validToken, isQualified, AGENDA_TZ } from "@/lib/booking";
+import { getAgenda, freeSlots, validToken, isQualified, AGENDA_TZ, leadTz } from "@/lib/booking";
 import { createEvent } from "@/lib/google";
 import { sendCapi } from "@/lib/meta";
 import { notifyBooking } from "@/lib/mail";
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   const cfg = await getAgenda();
   const start = new Date(String(b.start || ""));
   if (isNaN(start.getTime())) return NextResponse.json({ error: "Horario no válido." }, { status: 422 });
-  const free = await freeSlots(cfg);
+  const free = await freeSlots(cfg, leadTz(form.lang));
   if (!free.some((s) => s.getTime() === start.getTime())) {
     return NextResponse.json({ error: "Ese horario se acaba de ocupar. Elige otro, por favor.", taken: true }, { status: 409 });
   }
