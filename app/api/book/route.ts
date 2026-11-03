@@ -42,13 +42,14 @@ export async function POST(req: NextRequest) {
   }
   const answers = val("email") ? resp.answers : { ...resp.answers, _email: email };
   if (!val("email")) await db().from("responses").update({ answers }).eq("id", responseId);
+  const pt = form.lang === "pt";
   const lines = form.fields.filter((f) => f.type !== "consent").map((f) => `${f.label}\n${resp.answers[f.id] ?? "—"}`);
 
   let ev: { id: string; hangoutLink?: string };
   try {
     ev = await createEvent({
-      summary: `${cfg.title} · ${name}`,
-      description: `Reserva desde el formulario "${form.name}".\n\n${lines.join("\n\n")}${val("email") ? "" : `\n\nE-mail\n${email}`}`,
+      summary: `${pt ? cfg.title_pt || cfg.title : cfg.title} · ${name}`,
+      description: `${pt ? "Suas respostas:" : "Tus respuestas:"}\n\n${lines.join("\n\n")}${val("email") ? "" : `\n\nE-mail\n${email}`}`,
       start, end, attendee: email, tz: AGENDA_TZ,
     });
   } catch (e) {

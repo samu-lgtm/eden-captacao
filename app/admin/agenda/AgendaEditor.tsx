@@ -67,7 +67,10 @@ export function AgendaEditor({ initial }: { initial: AgendaConfig }) {
   return (
     <div className="sets">
       <div className="card sec"><div><h3>Reunión</h3><p>Lo que ve el lead y cómo queda en tu calendario.</p></div><div className="fs">
-        <label className="lbl">Título del evento<input className="inp" value={c.title} onChange={(e) => setC({ ...c, title: e.target.value })} /></label>
+        <div className="two">
+          <label className="lbl">Nombre de la reunión · España<input className="inp" value={c.title} onChange={(e) => setC({ ...c, title: e.target.value })} /></label>
+          <label className="lbl">Nombre de la reunión · Brasil<input className="inp" value={c.title_pt} onChange={(e) => setC({ ...c, title_pt: e.target.value })} /></label>
+        </div>
         <div className="two">
           <label className="lbl">Duración<select className="inp" value={c.duration} onChange={(e) => setC({ ...c, duration: Number(e.target.value) })}>{[15, 20, 30, 45, 60, 90].map((m) => <option key={m} value={m}>{m} min</option>)}</select></label>
           <label className="lbl">Margen entre reuniones<select className="inp" value={c.buffer} onChange={(e) => setC({ ...c, buffer: Number(e.target.value) })}>{[0, 5, 10, 15, 30].map((m) => <option key={m} value={m}>{m} min</option>)}</select></label>

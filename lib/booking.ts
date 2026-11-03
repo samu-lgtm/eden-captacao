@@ -10,7 +10,8 @@ export const AGENDA_TZ = "Europe/Madrid";
 export type Ranges = Record<string, [string, string][]>; // "1".."7" (lunes..domingo) → tramos HH:MM
 
 export interface AgendaConfig {
-  title: string;
+  title: string; // nombre del evento para leads de España
+  title_pt: string; // nombre del evento para leads de Brasil
   duration: number; // minutos
   buffer: number; // minutos libres antes y después
   notice: number; // horas mínimas de antelación
@@ -26,7 +27,8 @@ export const BR_TZ = "America/Sao_Paulo";
 export const leadTz = (lang: string) => (lang === "pt" ? BR_TZ : AGENDA_TZ);
 
 export const DEFAULT_AGENDA: AgendaConfig = {
-  title: "Reunión con Eden",
+  title: "Sesión Estratégica Eden",
+  title_pt: "Sessão Estratégica Eden",
   duration: 45,
   buffer: 15,
   notice: 12,

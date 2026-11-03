@@ -16,6 +16,7 @@ export async function PUT(req: NextRequest) {
   }
   const cfg: AgendaConfig = {
     title: String(b.title || DEFAULT_AGENDA.title).trim().slice(0, 80) || DEFAULT_AGENDA.title,
+    title_pt: String(b.title_pt || DEFAULT_AGENDA.title_pt).trim().slice(0, 80) || DEFAULT_AGENDA.title_pt,
     duration: num(b.duration, 15, 180, DEFAULT_AGENDA.duration),
     buffer: num(b.buffer, 0, 120, DEFAULT_AGENDA.buffer),
     notice: num(b.notice, 0, 168, DEFAULT_AGENDA.notice),
