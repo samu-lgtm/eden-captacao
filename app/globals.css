@@ -204,6 +204,8 @@ details.lead summary::-webkit-details-marker{display:none}
 .slot{all:unset;cursor:pointer;box-sizing:border-box;text-align:center;padding:10px 0;border:1px solid rgba(163,174,126,.6);border-radius:8px;font-size:15px;font-variant-numeric:tabular-nums}
 .slot:hover{background:rgba(163,174,126,.18)}
 .slot.on{background:#EDE5D6;color:#2B231F;border-color:#EDE5D6}
+.bk-email{display:grid;gap:6px;margin-top:22px;font-size:13px;color:var(--pub-soft)}
+.bk-email .qin{font-size:20px}
 
 .logicrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:8px;align-items:center}
 .logicrow .lopt{font-size:12.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

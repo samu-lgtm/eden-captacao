@@ -38,7 +38,7 @@ export async function sendCapi(
 
   const name = pick(form, response.answers, "text").trim();
   const [first, ...rest] = name.split(/\s+/);
-  const email = pick(form, response.answers, "email");
+  const email = pick(form, response.answers, "email") || (typeof response.answers._email === "string" ? response.answers._email : "");
   const phone = normalizePhone(pick(form, response.answers, "phone"), form.lang);
   const country = form.lang === "es" ? "es" : "br";
 

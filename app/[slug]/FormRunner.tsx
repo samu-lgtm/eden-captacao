@@ -161,7 +161,7 @@ export default function FormRunner({ form, live }: { form: PublicForm; live: boo
         {onIntro && form.intro ? (
           <Intro intro={form.intro} onStart={() => { started.current = Date.now(); setOnIntro(false); }} />
         ) : state === "book" && booking ? (
-          <Booking lang={form.lang} r={booking.responseId} t={booking.token} tz={form.lang === "pt" ? "America/Sao_Paulo" : "Europe/Madrid"}
+          <Booking lang={form.lang} r={booking.responseId} t={booking.token} tz={form.lang === "pt" ? "America/Sao_Paulo" : "Europe/Madrid"} askEmail={!form.fields.some((f) => f.type === "email")}
             onSkip={() => setState("done")}
             onBooked={(eventId, ev) => { if (consent === "yes" && window.fbq) window.fbq(META_STANDARD_EVENTS.includes(ev) ? "track" : "trackCustom", ev, {}, { eventID: eventId }); }} />
         ) : state === "done" ? (

@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const b = (await req.json().catch(() => ({}))) as { r?: string; t?: string; start?: string; eventId?: string; fbp?: string; fbc?: string };
+  const b = (await req.json().catch(() => ({}))) as { r?: string; t?: string; start?: string; eventId?: string; fbp?: string; fbc?: string; email?: string };
   const responseId = String(b.r || "");
   if (!validToken(responseId, String(b.t || ""))) return NextResponse.json({ error: "Enlace no válido." }, { status: 403 });
 
@@ -33,14 +33,22 @@ export async function POST(req: NextRequest) {
   const end = new Date(start.getTime() + cfg.duration * 60000);
 
   const val = (type: string) => { const f = form.fields.find((x) => x.type === type); return f ? String(resp.answers[f.id] ?? "") : ""; };
-  const name = val("text") || "Lead", email = val("email"), phone = val("phone");
+  const name = val("text") || "Lead", phone = val("phone");
+  // Si el formulario no pregunta el e-mail, el lead lo escribe en la pantalla de agenda (hace falta para la invitación).
+  const typed = String(b.email || "").trim().toLowerCase().slice(0, 200);
+  const email = val("email") || typed;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    return NextResponse.json({ error: form.lang === "pt" ? "Escreva um e-mail válido para receber o convite." : "Escribe un e-mail válido para recibir la invitación.", email: true }, { status: 422 });
+  }
+  const answers = val("email") ? resp.answers : { ...resp.answers, _email: email };
+  if (!val("email")) await db().from("responses").update({ answers }).eq("id", responseId);
   const lines = form.fields.filter((f) => f.type !== "consent").map((f) => `${f.label}\n${resp.answers[f.id] ?? "—"}`);
 
   let ev: { id: string; hangoutLink?: string };
   try {
     ev = await createEvent({
       summary: `${cfg.title} · ${name}`,
-      description: `Reserva desde el formulario "${form.name}".\n\n${lines.join("\n\n")}`,
+      description: `Reserva desde el formulario "${form.name}".\n\n${lines.join("\n\n")}${val("email") ? "" : `\n\nE-mail\n${email}`}`,
       start, end, attendee: email, tz: AGENDA_TZ,
     });
   } catch (e) {
@@ -60,7 +68,7 @@ export async function POST(req: NextRequest) {
   const scheduleEvent = form.settings.event_schedule || "Reunion_Agendada";
   if (form.settings.pixel_id && form.settings.capi_token) {
     const eventId = typeof b.eventId === "string" && /^[\w-]{6,64}$/.test(b.eventId) ? b.eventId : crypto.randomUUID();
-    tasks.push(sendCapi(form, { id: resp.id, answers: resp.answers, event_id: eventId }, { ip: resp.ip, userAgent: resp.user_agent, fbp: b.fbp, fbc: b.fbc }, scheduleEvent).then((r) =>
+    tasks.push(sendCapi(form, { id: resp.id, answers, event_id: eventId }, { ip: resp.ip, userAgent: resp.user_agent, fbp: b.fbp, fbc: b.fbc }, scheduleEvent).then((r) =>
       logActivity(r.ok ? "meta" : "err", r.ok ? `Evento ${scheduleEvent} de ${name} enviado a Meta.` : `Meta rechazó el evento ${scheduleEvent} de ${name}: ${r.error}`, form.id)));
   }
   tasks.push(notifyBooking(cfg.notify_to, { name, email, phone, form: form.name, start, meet: ev.hangoutLink || "" }));

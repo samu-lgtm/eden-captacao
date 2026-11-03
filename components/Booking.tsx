@@ -9,6 +9,7 @@ const T = {
     skip: "Prefiero que me contactéis", done: "Reunión confirmada", sent: "Te hemos enviado la invitación con el enlace de Meet a tu e-mail.",
     taken: "Ese horario se acaba de ocupar. Elige otro, por favor.", fail: "No hemos podido reservar. Inténtalo de nuevo.",
     tzName: { "Europe/Madrid": "España", "America/Sao_Paulo": "Brasilia" } as Record<string, string>,
+    email: "Tu e-mail (te enviamos ahí la invitación con el enlace de Meet)", emailPh: "nombre@empresa.com", emailErr: "Escribe un e-mail válido para recibir la invitación.",
   },
   pt: {
     title: "Escolha o dia e o horário da sua reunião", sub: (m: number, tz: string) => `${m} minutos pelo Google Meet · horário de ${tz}`,
@@ -17,11 +18,12 @@ const T = {
     skip: "Prefiro que vocês entrem em contato", done: "Reunião confirmada", sent: "Enviamos o convite com o link do Meet para o seu e-mail.",
     taken: "Esse horário acabou de ser ocupado. Escolha outro, por favor.", fail: "Não conseguimos reservar. Tente de novo.",
     tzName: { "Europe/Madrid": "Espanha", "America/Sao_Paulo": "Brasília" } as Record<string, string>,
+    email: "Seu e-mail (enviaremos o convite com o link do Meet para ele)", emailPh: "nome@empresa.com", emailErr: "Escreva um e-mail válido para receber o convite.",
   },
 };
 
-export function Booking({ lang, r, t, tz, onSkip, onBooked }: {
-  lang: "es" | "pt"; r: string; t: string; tz: string;
+export function Booking({ lang, r, t, tz, askEmail, onSkip, onBooked }: {
+  lang: "es" | "pt"; r: string; t: string; tz: string; askEmail?: boolean;
   onSkip: () => void; onBooked: (eventId: string, event: string) => void;
 }) {
   const L = T[lang];
@@ -33,6 +35,8 @@ export function Booking({ lang, r, t, tz, onSkip, onBooked }: {
   const [sel, setSel] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const emailOk = !askEmail || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
 
   const load = useCallback(async () => {
     setErr("");
@@ -66,11 +70,12 @@ export function Booking({ lang, r, t, tz, onSkip, onBooked }: {
 
   async function book() {
     if (!sel) return;
+    if (!emailOk) { setErr(L.emailErr); return; }
     setBusy(true); setErr("");
     const eventId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
     const cookie = (n: string) => document.cookie.split("; ").find((c) => c.startsWith(n + "="))?.split("=")[1];
     try {
-      const res = await fetch("/api/book", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ r, t, start: sel, eventId, fbp: cookie("_fbp"), fbc: cookie("_fbc") }) });
+      const res = await fetch("/api/book", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ r, t, start: sel, eventId, email: askEmail ? email.trim() : undefined, fbp: cookie("_fbp"), fbc: cookie("_fbc") }) });
       const j = await res.json().catch(() => ({}));
       if (res.ok) { setDone(j.start); onBooked(eventId, String(j.event || "Schedule")); return; }
       if (j.taken) { setErr(L.taken); setSel(""); await load(); } else if (res.status === 409 && j.start) { setDone(j.start); }
@@ -112,6 +117,13 @@ export function Booking({ lang, r, t, tz, onSkip, onBooked }: {
               <button key={s} type="button" className={`slot ${sel === s ? "on" : ""}`} onClick={() => setSel(s)}>{fTime(s)}</button>
             ))}
           </div>
+          {askEmail ? (
+            <label className="bk-email">
+              <span>{L.email}</span>
+              <input className="qin" type="email" inputMode="email" autoComplete="email" placeholder={L.emailPh} value={email}
+                onChange={(e) => { setEmail(e.target.value); if (err === L.emailErr) setErr(""); }} />
+            </label>
+          ) : null}
           {err ? <div className="perr" role="alert">{err}</div> : null}
           <div className="pubnav">
             <button className="pbtn" type="button" disabled={!sel || busy} onClick={book}>{busy ? L.booking : L.confirm}</button>
