@@ -4,7 +4,7 @@ import { db, getForm } from "@/lib/db";
 import type { Form, ResponseRow } from "@/lib/types";
 import { fmtDT, fmtD, dayKey, pct } from "@/lib/fmt";
 import FormEditor from "./FormEditor";
-import { ResendButton, CopyCsv, DuplicateButton } from "./Actions";
+import { ResendButton, CopyCsv, DuplicateButton, NotifyButton } from "./Actions";
 import { TabBar } from "./TabBar";
 
 type Tab = "editor" | "config" | "respuestas" | "insights";
@@ -55,9 +55,10 @@ export default async function FormPage({ params, searchParams }: { params: { id:
         </div>
         {!rs.length ? <div className="card empty">Todavía no hay respuestas.</div> : (
           <div className="card tw"><table>
-            <thead><tr><th>Recibido</th>{cols.map((c) => <th key={c.id}>{c.label.length > 26 ? c.label.slice(0, 24) + "…" : c.label}</th>)}<th>Calificado</th><th>Meta</th><th>Reunión</th><th>Origen</th></tr></thead>
+            <thead><tr><th></th><th>Recibido</th>{cols.map((c) => <th key={c.id}>{c.label.length > 26 ? c.label.slice(0, 24) + "…" : c.label}</th>)}<th>Calificado</th><th>Meta</th><th>Reunión</th><th>Origen</th></tr></thead>
             <tbody>{rs.map((r) => (
               <tr key={r.id}>
+                <td><NotifyButton id={r.id} /></td>
                 <td className="muted" style={{ whiteSpace: "nowrap" }}>{fmtDT(r.created_at)}</td>
                 {cols.map((c) => <td key={c.id}>{String(r.answers[c.id] ?? "")}</td>)}
                 <td>{(r as ResponseRow & { qualified?: boolean | null }).qualified === false ? <span className="pill off">No</span> : (r as ResponseRow & { qualified?: boolean | null }).qualified ? <span className="pill ok">Sí</span> : <span className="muted">—</span>}</td>

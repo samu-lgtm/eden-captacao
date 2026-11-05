@@ -19,6 +19,21 @@ export function ResendButton({ id }: { id: string }) {
   );
 }
 
+export function NotifyButton({ id }: { id: string }) {
+  const [msg, setMsg] = useState("");
+  return (
+    <span title="Reenviar el aviso por e-mail">
+      <button className="ib" aria-label="Reenviar aviso por e-mail" disabled={msg === "…"} onClick={async () => {
+        setMsg("…");
+        const r = await fetch(`/api/admin/responses/${id}/notify`, { method: "POST" });
+        const j = await r.json().catch(() => ({}));
+        setMsg(r.ok ? "Enviado" : j.error || "Falló");
+      }}>✉</button>
+      {msg && msg !== "…" ? <span className="muted" style={{ fontSize: 11, marginLeft: 4 }}>{msg.slice(0, 80)}</span> : null}
+    </span>
+  );
+}
+
 export function CopyCsv({ csv }: { csv: string }) {
   const [done, setDone] = useState(false);
   return (
