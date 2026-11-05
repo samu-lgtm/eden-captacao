@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { getAgenda, AGENDA_TZ } from "@/lib/booking";
-import { getConn, googleConfigured } from "@/lib/google";
+import { getConn, googleConfigured, busy } from "@/lib/google";
 import { AgendaEditor, GoogleButtons, CancelBooking } from "./AgendaEditor";
 
 interface Booking { id: string; start_at: string; end_at: string; name: string; email: string; phone: string; meet_link: string | null; form_id: string | null }
@@ -20,6 +20,11 @@ export default async function Agenda({ searchParams }: { searchParams: { google?
     db().from("bookings").select("*").eq("status", "confirmada").gte("end_at", new Date(Date.now() - 3600000).toISOString()).order("start_at").limit(200),
     db().from("forms").select("id,name"),
   ]);
+  // Comprobación real: pedimos a Google la ocupación de las próximas 24 h con la conexión guardada.
+  let live: string | null = null;
+  if (conn) {
+    try { await busy(new Date(), new Date(Date.now() + 86400000)); } catch (e) { live = e instanceof Error ? e.message : "Google no responde"; }
+  }
   const bookings = (data || []) as Booking[];
   const forms = new Map(((fd || []) as { id: string; name: string }[]).map((f) => [f.id, f.name]));
   const fmt = (iso: string, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("es-ES", { timeZone: AGENDA_TZ, ...o }).format(new Date(iso));
@@ -29,8 +34,9 @@ export default async function Agenda({ searchParams }: { searchParams: { google?
 
   return (
     <>
-      <div className="top"><h1>Agenda</h1>{conn ? <span className="pill ok">Google Calendar conectado</span> : <span className="pill warn">Google Calendar sin conectar</span>}</div>
+      <div className="top"><h1>Agenda</h1>{conn && !live ? <span className="pill ok">Google Calendar conectado · comprobado ahora</span> : conn ? <span className="pill err">Conexión con Google caducada</span> : <span className="pill warn">Google Calendar sin conectar</span>}</div>
       {msg ? <div className={msg[0] === "err" ? "errbox" : "note"} style={{ marginBottom: 14 }}>{msg[1]}</div> : null}
+      {live ? <div className="errbox" style={{ marginBottom: 14 }}>Google ya no acepta la conexión guardada, así que los leads no pueden reservar. Pulsa “Desconectar” y vuelve a conectar Google Calendar. Detalle: {live}</div> : null}
 
       <div className="sets" style={{ marginBottom: 26 }}>
         <div className="card sec"><div><h3>Google Calendar</h3><p>Las reuniones se crean en este calendario con enlace de Meet, y lo que ya tengas ocupado en él no se ofrece a los leads.</p></div><div className="fs">

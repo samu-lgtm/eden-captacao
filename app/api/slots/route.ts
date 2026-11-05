@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAgenda, freeSlots, validToken, leadTz } from "@/lib/booking";
-import { db, getForm } from "@/lib/db";
+import { db, getForm, logActivity } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ duration: cfg.duration, slots: slots.map((s) => s.toISOString()) });
   } catch (e) {
     console.error("[slots]", e);
+    await logActivity("err", `Un lead no ha podido ver la agenda: ${e instanceof Error ? e.message : "error"}`).catch(() => {});
     return NextResponse.json({ error: "No hemos podido cargar la agenda." }, { status: 502 });
   }
 }
